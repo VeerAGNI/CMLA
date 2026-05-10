@@ -1,13 +1,34 @@
 import { AuthProvider, useAuth } from '@/src/lib/AuthContext';
-import { LogIn, LogOut, LayoutDashboard, BrainCircuit, Activity } from 'lucide-react';
-import React, { useState } from 'react';
+import { LogIn, LogOut, LayoutDashboard, BrainCircuit, Activity, Settings, Flame } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import { Dashboard } from './components/Dashboard';
 import { RoleClaim } from './components/RoleClaim';
+import { OnboardingGuide } from './components/OnboardingGuide';
+import { SettingsModal } from './components/SettingsModal';
 import { Role } from '@/src/types';
+
+export type TabType = 'pipeline' | 'leaderboard' | 'analytics';
 
 function AppContent() {
   const { userProfile, loading, signIn, signOut } = useAuth();
   const [overrideRole, setOverrideRole] = useState<Role | null>(null);
+  const [activeTab, setActiveTab] = useState<TabType>('pipeline');
+  const [showGuide, setShowGuide] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+
+  useEffect(() => {
+    if (userProfile && userProfile.role !== 'unassigned') {
+      const hasSeen = localStorage.getItem('pipeline_has_seen_guide');
+      if (!hasSeen) {
+        setShowGuide(true);
+      }
+    }
+  }, [userProfile]);
+
+  const handleCloseGuide = () => {
+    localStorage.setItem('pipeline_has_seen_guide', 'true');
+    setShowGuide(false);
+  };
 
   if (loading || !userProfile) {
     return (
@@ -19,31 +40,57 @@ function AppContent() {
 
   return (
     <div className="min-h-screen flex flex-col bg-zinc-950">
+      {showGuide && <OnboardingGuide onClose={handleCloseGuide} />}
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} onShowGuide={() => setShowGuide(true)} />}
+
       <header className="glass sticky top-0 z-50 px-4 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b-0 border-x-0 border-t-0 rounded-none mix-blend-luminosity">
         <div className="flex items-center justify-between w-full md:w-auto">
           <div className="flex items-center gap-3">
             <LayoutDashboard className="w-6 h-6 text-[var(--color-neon-blue)]" />
             <span className="font-bold tracking-widest uppercase text-sm">Pipeline</span>
           </div>
-          <div className="md:hidden flex items-center gap-3">
-            <div className="text-right">
+          
+          <div className="md:hidden flex flex-col items-end">
+            <div className="flex items-center gap-2 text-orange-500 font-bold tracking-wider text-xs bg-orange-500/10 px-2 py-1 rounded-full border border-orange-500/20">
+              <Flame className="w-3 h-3 fill-orange-500" />
+              {userProfile.streak}
+            </div>
+            <div className="text-right mt-1">
               <div className="text-sm font-medium">{userProfile.displayName}</div>
-              <div className="text-xs text-[var(--color-neon-purple)] uppercase tracking-wider font-bold">
+              <div className="text-[10px] text-[var(--color-neon-purple)] uppercase tracking-wider font-bold">
                 {overrideRole ? `DEV: ${overrideRole}` : (userProfile.role !== 'unassigned' ? userProfile.role : 'GUEST')}
               </div>
             </div>
           </div>
         </div>
+
+        {userProfile.role !== 'unassigned' && (
+          <div className="flex bg-black/40 p-1 rounded-xl w-full md:w-auto justify-center">
+            {(['pipeline', 'leaderboard', 'analytics'] as TabType[]).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-4 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-all ${
+                  activeTab === tab 
+                    ? 'bg-white/10 text-white shadow-[0_0_15px_rgba(255,255,255,0.05)]' 
+                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        )}
         
-        <div className="flex items-center justify-between md:justify-end gap-6 w-full md:w-auto">
+        <div className="flex items-center gap-4 w-full md:w-auto justify-end">
           {userProfile.role === 'builder' && (
-            <div className="flex items-center justify-center bg-zinc-900 border border-white/10 rounded-lg p-1 w-full md:w-auto">
-              <span className="text-[9px] text-zinc-500 font-bold px-2 uppercase tracking-widest hidden sm:inline">Dev Mode:</span>
+            <div className="flex items-center justify-center bg-zinc-900 border border-white/10 rounded-lg p-1 w-full md:w-auto overflow-x-auto hide-scrollbar">
+              <span className="text-[9px] text-zinc-500 font-bold px-2 uppercase tracking-widest hidden sm:inline">Dev:</span>
               {(['creator', 'strategist', 'builder'] as Role[]).map(r => (
                 <button
                   key={r}
                   onClick={() => setOverrideRole(r)}
-                  className={`flex-1 md:flex-none px-3 py-1.5 md:py-1 text-[10px] font-bold uppercase rounded-md transition ${
+                  className={`px-3 py-1.5 md:py-1 text-[10px] font-bold uppercase rounded-md transition whitespace-nowrap ${
                     (overrideRole || userProfile.role) === r 
                       ? 'bg-[var(--color-neon-blue)] text-black' 
                       : 'text-zinc-500 hover:text-white'
@@ -54,14 +101,28 @@ function AppContent() {
               ))}
             </div>
           )}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-4">
+            <div className="flex items-center gap-1.5 text-orange-500 font-bold tracking-wider text-xs bg-orange-500/10 px-2 py-1 rounded-md border border-orange-500/20 shadow-[0_0_10px_rgba(249,115,22,0.2)]" title="Daily Streak">
+              <Flame className="w-4 h-4 fill-orange-500" />
+              {userProfile.streak}
+            </div>
             <div className="text-right">
               <div className="text-sm font-medium">{userProfile.displayName}</div>
-              <div className="text-xs text-[var(--color-neon-purple)] uppercase tracking-wider font-bold">
+              <div className="text-[10px] text-[var(--color-neon-purple)] uppercase tracking-wider font-bold">
                 {overrideRole ? `DEV: ${overrideRole}` : (userProfile.role !== 'unassigned' ? userProfile.role : 'GUEST')}
               </div>
             </div>
           </div>
+          
+          {userProfile.role !== 'unassigned' && (
+            <button 
+              onClick={() => setShowSettings(true)}
+              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white transition border border-white/10 ml-auto md:ml-0"
+              title="Settings"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </header>
 
@@ -69,7 +130,7 @@ function AppContent() {
         {userProfile.role === 'unassigned' ? (
           <RoleClaim userProfile={userProfile} />
         ) : (
-          <Dashboard userProfile={userProfile} effectiveRole={overrideRole || userProfile.role} />
+          <Dashboard userProfile={userProfile} effectiveRole={overrideRole || userProfile.role} activeTab={activeTab} />
         )}
       </main>
     </div>

@@ -1,23 +1,18 @@
 import React, { useState } from 'react';
-import { User, AppIdea, Role } from '@/src/types';
+import { User } from '@/src/types';
 import { db, handleFirestoreError, OperationType } from '@/src/lib/firebase';
 import { collection, doc, setDoc, serverTimestamp, updateDoc, increment } from 'firebase/firestore';
 import { PlusCircle, Loader2 } from 'lucide-react';
 
 interface ActionPanelProps {
   userProfile: User;
-  ideas: AppIdea[];
-  effectiveRole: Role;
 }
 
-export function ActionPanel({ userProfile, effectiveRole }: ActionPanelProps) {
+export function ActionPanel({ userProfile }: ActionPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
   const [loading, setLoading] = useState(false);
-
-  // Users only get this if they are actively in creator role/view
-  const canCreate = effectiveRole === 'creator'; 
 
   const handleDropIdea = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +38,6 @@ export function ActionPanel({ userProfile, effectiveRole }: ActionPanelProps) {
         updatedAt: serverTimestamp()
       });
 
-      // Simple streak/drop logic. Usually handled safely with transactions or cloud functions, but we simulate.
       const today = new Date().toISOString().split('T')[0];
       if (userProfile.lastDropDate !== today) {
         await updateDoc(doc(db, 'users', userProfile.id), {
@@ -63,19 +57,11 @@ export function ActionPanel({ userProfile, effectiveRole }: ActionPanelProps) {
     }
   };
 
-  if (!canCreate) {
-    return (
-      <div className="glass rounded-2xl p-6 text-center text-zinc-500 text-xs">
-        System active. Awaiting inputs.
-      </div>
-    );
-  }
-
   return (
     <div className="glass rounded-2xl p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-bold tracking-widest text-[var(--color-neon-blue)]">Drop Window</h2>
-        <div className="text-[10px] text-zinc-500">17:00 - 22:00</div>
+        <h2 className="text-sm font-bold tracking-widest text-[var(--color-neon-blue)]">Idea Vault</h2>
+        <div className="text-[10px] text-emerald-400 font-bold bg-emerald-400/10 px-2 py-0.5 rounded uppercase tracking-widest border border-emerald-400/20">Open</div>
       </div>
 
       {!isOpen ? (
@@ -119,7 +105,7 @@ export function ActionPanel({ userProfile, effectiveRole }: ActionPanelProps) {
               disabled={loading}
               className="flex-1 px-4 py-2 text-xs font-semibold tracking-widest bg-[var(--color-neon-blue)] text-zinc-950 hover:bg-opacity-90 rounded-lg transition flex items-center justify-center gap-2"
             >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'DROP'}
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'SUBMIT'}
             </button>
           </div>
         </form>

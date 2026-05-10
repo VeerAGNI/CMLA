@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { User, AppIdea, Role } from '@/src/types';
 import { db, handleFirestoreError, OperationType } from '@/src/lib/firebase';
-import { collection, query, orderBy, onSnapshot, where } from 'firebase/firestore';
+import { collection, query, onSnapshot, where } from 'firebase/firestore';
 import { KanbanBoard } from './KanbanBoard';
 import { Leaderboard } from './Leaderboard';
 import { ActionPanel } from './ActionPanel';
+import { AnalyticsPanel } from './AnalyticsPanel';
 
 interface DashboardProps {
   userProfile: User;
   effectiveRole: Role;
+  activeTab: 'pipeline' | 'leaderboard' | 'analytics';
 }
 
-export function Dashboard({ userProfile, effectiveRole }: DashboardProps) {
+export function Dashboard({ userProfile, effectiveRole, activeTab }: DashboardProps) {
   const [ideas, setIdeas] = useState<AppIdea[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -43,17 +45,29 @@ export function Dashboard({ userProfile, effectiveRole }: DashboardProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 h-[calc(100vh-8rem)]">
-      <div className="xl:col-span-1 space-y-6 flex flex-col h-full uppercase tracking-wide">
-        <ActionPanel userProfile={userProfile} ideas={ideas} effectiveRole={effectiveRole} />
-        <Leaderboard />
-      </div>
-      
-      <div className="xl:col-span-3 h-full overflow-hidden flex flex-col">
-        <div className="flex-1 overflow-hidden">
-          <KanbanBoard ideas={ideas} userProfile={userProfile} effectiveRole={effectiveRole} />
+    <>
+      {activeTab === 'pipeline' && (
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 h-[calc(100vh-8rem)]">
+          <div className="xl:col-span-1 space-y-6 flex flex-col h-full uppercase tracking-wide">
+            <ActionPanel userProfile={userProfile} />
+          </div>
+          <div className="xl:col-span-3 h-full overflow-hidden flex flex-col">
+            <div className="flex-1 overflow-hidden">
+              <KanbanBoard ideas={ideas} userProfile={userProfile} effectiveRole={effectiveRole} />
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      )}
+
+      {activeTab === 'leaderboard' && (
+        <div className="h-[calc(100vh-8rem)] flex items-start justify-center max-w-2xl mx-auto w-full">
+          <Leaderboard />
+        </div>
+      )}
+
+      {activeTab === 'analytics' && (
+        <AnalyticsPanel ideas={ideas} userProfile={userProfile} />
+      )}
+    </>
   );
 }

@@ -49,8 +49,9 @@ service cloud.firestore {
         
       allow update: if isSignedIn() && isValidUser(incoming()) && (
         (request.auth.uid == userId && incoming().diff(existing()).affectedKeys().hasOnly(['updatedAt'])) ||
-        // Allow role and displayName assignment from unassigned
-        (request.auth.uid == userId && existing().role == 'unassigned' && incoming().diff(existing()).affectedKeys().hasOnly(['role', 'displayName', 'updatedAt'])) ||
+        // Allow role and displayName assignment from unassigned, and migration of points
+        (request.auth.uid == userId && existing().role == 'unassigned' && incoming().diff(existing()).affectedKeys().hasAny(['role', 'displayName', 'updatedAt']) && 
+         incoming().diff(existing()).affectedKeys().hasOnly(['role', 'displayName', 'points', 'streak', 'lastDropDate', 'updatedAt'])) ||
         // Allow point and streak updates
         (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['points', 'streak', 'lastDropDate', 'updatedAt']) && incoming().updatedAt == request.time) ||
         // Allow archiving old sessions
