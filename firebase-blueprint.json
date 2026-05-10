@@ -1,0 +1,62 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with roles and points",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["creator", "strategist", "builder"] },
+        "points": { "type": "number" },
+        "streak": { "type": "number" },
+        "lastDropDate": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["email", "role", "points", "streak", "createdAt", "updatedAt"]
+    },
+    "AppIdea": {
+      "title": "App Idea",
+      "description": "An idea submitted through the system",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": [
+            "under_review",
+            "rejected",
+            "appealed",
+            "approved",
+            "approved_pending_strategy",
+            "building",
+            "done",
+            "final_rejected"
+          ]
+        },
+        "strategy": { "type": "string" },
+        "rejectionReason": { "type": "string" },
+        "appealUsed": { "type": "boolean" },
+        "timeline": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/TimelineEvent" }
+        },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["title", "description", "createdBy", "status", "appealUsed", "timeline", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles (roles, points)"
+    },
+    "ideas/{ideaId}": {
+      "schema": { "$ref": "#/entities/AppIdea" },
+      "description": "Core ideas pipeline"
+    }
+  }
+}

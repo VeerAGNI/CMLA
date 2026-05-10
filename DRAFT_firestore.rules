@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() { return request.auth != null; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    
+    function getUserData() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function isCreator() { return getUserData().role == 'creator'; }
+    function isStrategist() { return getUserData().role == 'strategist'; }
+    function isBuilder() { return getUserData().role == 'builder'; }
+    
+    // Users Collection (No PII stored here, just displayName, role, points, streak, etc)
+    function isValidUser(data) {
+      return data.displayName is string && data.displayName.size() <= 100 &&
+             data.role in ['creator', 'strategist', 'builder'] &&
+             data.points is number && data.points >= 0 &&
+             data.streak is number && data.streak >= 0 &&
+             (data.keys().hasAny(['lastDropDate']) == false || data.lastDropDate is string) &&
+             data.createdAt is timestamp && data.updatedAt is timestamp;
+    }
+
+    match /users/{userId} {
+      // Anyone signed in can view user profiles for leaderboards
+      allow get: if isSignedIn() && isValidId(userId);
+      allow list: if isSignedIn() && resource.data.role in ['creator', 'strategist', 'builder'];
+      
+      allow create: if isSignedIn() && request.auth.uid == userId &&
+        isValidUser(incoming()) && incoming().createdAt == request.time && incoming().updatedAt == request.time &&
+        incoming().points == 0 && incoming().streak == 0 &&
+        incoming().keys().hasAll(['displayName', 'role', 'points', 'streak', 'createdAt', 'updatedAt']) && incoming().keys().size() <= 7;
+        
+      allow update: if isSignedIn() && isValidUser(incoming()) && (
+        (request.auth.uid == userId && incoming().diff(existing()).affectedKeys().hasOnly(['updatedAt'])) ||
+        (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['points', 'streak', 'lastDropDate', 'updatedAt']) && incoming().updatedAt == request.time)
+      );
+    }
+    
+    // Ideas Collection
+    function isValidIdeaCreate(data) {
+      return data.title is string && data.title.size() <= 200 && data.title.size() > 0 &&
+             data.description is string && data.description.size() <= 5000 &&
+             data.createdBy == request.auth.uid &&
+             data.status == 'under_review' &&
+             data.appealUsed == false &&
+             data.timeline is list && data.timeline.size() > 0 &&
+             data.createdAt is timestamp && data.updatedAt is timestamp &&
+             data.keys().hasAll(['title', 'description', 'createdBy', 'status', 'appealUsed', 'timeline', 'createdAt', 'updatedAt']) && data.keys().size() <= 10;
+    }
+
+    function isValidIdeaUpdate(data) {
+      return data.title is string && data.title.size() <= 200 &&
+             data.description is string && data.description.size() <= 5000 &&
+             data.createdBy == existing().createdBy &&
+             data.status in ['under_review', 'rejected', 'appealed', 'approved', 'approved_pending_strategy', 'building', 'done', 'final_rejected'] &&
+             data.appealUsed is bool &&
+             data.timeline is list && data.timeline.size() <= 50 &&
+             (data.keys().hasAny(['strategy']) == false || (data.strategy is string && data.strategy.size() <= 5000)) &&
+             (data.keys().hasAny(['rejectionReason']) == false || (data.rejectionReason is string && data.rejectionReason.size() <= 1000)) &&
+             data.updatedAt is timestamp && incoming().updatedAt == request.time;
+    }
+
+    match /ideas/{ideaId} {
+      allow get: if isSignedIn() && isValidId(ideaId);
+      // All ideas are visible to the team
+      allow list: if isSignedIn() && resource.data.status in ['under_review', 'rejected', 'appealed', 'approved', 'approved_pending_strategy', 'building', 'done', 'final_rejected'];
+      
+      allow create: if isSignedIn() && isCreator() &&
+        isValidIdeaCreate(incoming()) && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+        
+      allow update: if isSignedIn() && isValidId(ideaId) && isValidIdeaUpdate(incoming()) && (
+        (isStrategist() && existing().status in ['under_review', 'approved_pending_strategy'] && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'strategy', 'rejectionReason', 'timeline', 'updatedAt'])) ||
+        (isCreator() && request.auth.uid == existing().createdBy && existing().status == 'rejected' && existing().appealUsed == false && incoming().status == 'appealed' && incoming().appealUsed == true && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'appealUsed', 'timeline', 'updatedAt'])) ||
+        (isBuilder() && existing().status in ['appealed', 'approved', 'building'] && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'timeline', 'updatedAt']))
+      );
+    }
+  }
+}
