@@ -70,6 +70,36 @@ export function AnalyticsPanel({ ideas, userProfile }: { ideas: AppIdea[], userP
           <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-red-500/50"/> Rej</div>
         </div>
       </div>
+
+      <div className="mt-8 mb-4 flex items-center justify-between">
+        <h2 className="text-xl font-bold">Full Idea Log</h2>
+        <div className="text-xs text-zinc-500 font-bold uppercase tracking-widest">All System Inputs</div>
+      </div>
+
+      <div className="space-y-3">
+        {ideas.map(idea => (
+          <div key={idea.id} className="glass p-4 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div>
+              <div className="font-bold text-lg mb-1">{idea.title}</div>
+              <div className="text-zinc-400 text-sm line-clamp-1">{idea.description}</div>
+            </div>
+            <div className="flex items-center gap-3 shrink-0">
+              <span className={`text-[10px] uppercase tracking-widest font-bold px-2 py-1 rounded bg-white/5 border border-white/10 ${
+                idea.status === 'done' ? 'text-emerald-400' :
+                ['approved', 'building'].includes(idea.status) ? 'text-[var(--color-neon-blue)]' :
+                ['rejected', 'final_rejected'].includes(idea.status) ? 'text-red-400' :
+                idea.status === 'appealed' ? 'text-[var(--color-neon-purple)]' :
+                'text-yellow-400'
+              }`}>
+                {idea.status.replace(/_/g, ' ')}
+              </span>
+            </div>
+          </div>
+        ))}
+        {ideas.length === 0 && (
+          <div className="text-center text-zinc-500 py-8">No data points logged yet</div>
+        )}
+      </div>
     </div>
   );
 }

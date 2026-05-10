@@ -42,8 +42,12 @@ export function Leaderboard() {
             </div>
             
             <div className="flex items-center gap-4 text-right">
-              <div className="flex items-center gap-1 text-[var(--color-neon-purple)]" title="Streak">
-                <Flame className="w-3 h-3" />
+              <div className={`flex items-center gap-1.5 font-bold tracking-wider text-xs px-2 py-0.5 rounded-full border transition-all duration-300 ${
+                u.streak > 0 
+                  ? 'text-orange-400 bg-orange-500/10 border-orange-500/30 shadow-[0_0_10px_rgba(249,115,22,0.2)]' 
+                  : 'text-zinc-600 bg-zinc-800/20 border-zinc-700/20 grayscale opacity-50'
+              }`} title="Streak">
+                <Flame className={`w-3 h-3 ${u.streak > 0 ? 'fill-orange-500 text-orange-500' : 'fill-zinc-700 text-zinc-600'}`} />
                 <span className="font-mono text-xs">{u.streak}</span>
               </div>
               <div className="font-mono text-sm text-[var(--color-neon-blue)] tabular-nums">

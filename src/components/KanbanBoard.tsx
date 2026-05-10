@@ -13,35 +13,24 @@ export function KanbanBoard({ ideas, userProfile, effectiveRole }: KanbanBoardPr
   
   if (effectiveRole === 'creator') {
     columns = [
-      { id: 'under_review', statuses: ['under_review', 'approved_pending_strategy'], title: 'In Review', color: 'text-zinc-400' },
-      { id: 'rejected', statuses: ['rejected', 'final_rejected'], title: 'Rejected', color: 'text-red-400' },
-      { id: 'appealed', statuses: ['appealed'], title: 'Appealed', color: 'text-[var(--color-neon-purple)]' },
-      { id: 'building', statuses: ['approved', 'building'], title: 'Building', color: 'text-[var(--color-neon-blue)]' },
-      { id: 'done', statuses: ['done'], title: 'Done', color: 'text-emerald-400' }
+      { id: 'rejected', statuses: ['rejected'], title: 'Action Required', color: 'text-red-400' },
+      { id: 'appealed', statuses: ['appealed'], title: 'Appealed', color: 'text-[var(--color-neon-purple)]' }
     ];
   } else if (effectiveRole === 'strategist') {
     columns = [
       { id: 'inbox', statuses: ['under_review'], title: 'Pending Review', color: 'text-zinc-400' },
-      { id: 'strategy', statuses: ['approved_pending_strategy'], title: 'Needs Strategy', color: 'text-[var(--color-neon-purple)]' },
-      { id: 'history_building', statuses: ['approved', 'building', 'done'], title: 'Pipeline', color: 'text-[var(--color-neon-blue)]' },
-      { id: 'history_rejected', statuses: ['rejected', 'appealed', 'final_rejected'], title: 'Archived / Appealed', color: 'text-zinc-600' }
+      { id: 'strategy', statuses: ['approved_pending_strategy'], title: 'Needs Strategy', color: 'text-[var(--color-neon-purple)]' }
     ];
   } else if (effectiveRole === 'builder') {
     columns = [
       { id: 'appeals', statuses: ['appealed'], title: 'Appeals', color: 'text-[var(--color-neon-purple)]' },
       { id: 'build_queue', statuses: ['approved'], title: 'Build Queue', color: 'text-zinc-400' },
-      { id: 'building', statuses: ['building'], title: 'In Progress', color: 'text-[var(--color-neon-blue)]' },
-      { id: 'done', statuses: ['done'], title: 'Done', color: 'text-emerald-400' }
+      { id: 'building', statuses: ['building'], title: 'In Progress', color: 'text-[var(--color-neon-blue)]' }
     ];
   } else {
-    // Default fallback or "all" view
+    // Default fallback
     columns = [
-      { id: 'all_inbox', statuses: ['under_review'], title: 'Initial Drop', color: 'text-zinc-400' },
-      { id: 'all_strategy', statuses: ['approved_pending_strategy'], title: 'Needs Strategy', color: 'text-[var(--color-neon-purple)]' },
-      { id: 'all_appeals', statuses: ['appealed'], title: 'Appeals', color: 'text-[var(--color-neon-purple)]' },
-      { id: 'all_build', statuses: ['approved', 'building'], title: 'Build Queue / WIP', color: 'text-[var(--color-neon-blue)]' },
-      { id: 'all_done', statuses: ['done'], title: 'Done', color: 'text-emerald-400' },
-      { id: 'all_rejected', statuses: ['rejected', 'final_rejected'], title: 'Rejected', color: 'text-red-400' }
+      { id: 'all_inbox', statuses: ['under_review'], title: 'Initial Drop', color: 'text-zinc-400' }
     ];
   }
 

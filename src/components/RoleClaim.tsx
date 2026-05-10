@@ -8,16 +8,18 @@ export function RoleClaim({ userProfile }: { userProfile: User }) {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const processingRef = React.useRef(false);
 
   // Persist code check
   useEffect(() => {
     const savedCode = localStorage.getItem('pipeline_access_code');
-    if (savedCode && userProfile.role === 'unassigned') {
+    if (savedCode && userProfile.role === 'unassigned' && !processingRef.current) {
+      processingRef.current = true;
       setCode(savedCode);
       // Auto submit if there's a saved valid code
       autoClaim(savedCode);
     }
-  }, []);
+  }, [userProfile.role]);
 
   const autoClaim = async (savedCode: string) => {
     try {

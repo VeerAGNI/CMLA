@@ -17,6 +17,12 @@ function AppContent() {
   const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
+    // Theme init
+    const savedTheme = localStorage.getItem('pipeline_theme');
+    if (savedTheme === 'light') {
+      document.documentElement.classList.add('light-theme');
+    }
+
     if (userProfile && userProfile.role !== 'unassigned') {
       const hasSeen = localStorage.getItem('pipeline_has_seen_guide');
       if (!hasSeen) {
@@ -51,8 +57,12 @@ function AppContent() {
           </div>
           
           <div className="md:hidden flex flex-col items-end">
-            <div className="flex items-center gap-2 text-orange-500 font-bold tracking-wider text-xs bg-orange-500/10 px-2 py-1 rounded-full border border-orange-500/20">
-              <Flame className="w-3 h-3 fill-orange-500" />
+            <div className={`flex items-center gap-2 font-bold tracking-wider text-xs px-2 py-1 rounded-full border transition-all duration-300 ${
+              userProfile.streak > 0 
+                ? 'text-orange-400 bg-orange-500/10 border-orange-500/30 shadow-[0_0_15px_rgba(249,115,22,0.3)] animate-pulse' 
+                : 'text-zinc-500 bg-zinc-800/50 border-zinc-700/50'
+            }`}>
+              <Flame className={`w-3 h-3 ${userProfile.streak > 0 ? 'fill-orange-500 text-orange-500' : 'fill-zinc-600 text-zinc-500'}`} />
               {userProfile.streak}
             </div>
             <div className="text-right mt-1">
@@ -102,9 +112,13 @@ function AppContent() {
             </div>
           )}
           <div className="hidden md:flex items-center gap-4">
-            <div className="flex items-center gap-1.5 text-orange-500 font-bold tracking-wider text-xs bg-orange-500/10 px-2 py-1 rounded-md border border-orange-500/20 shadow-[0_0_10px_rgba(249,115,22,0.2)]" title="Daily Streak">
-              <Flame className="w-4 h-4 fill-orange-500" />
-              {userProfile.streak}
+            <div className={`flex items-center gap-1.5 font-bold tracking-wider text-xs px-2 py-1 rounded-md border transition-all duration-300 ${
+              userProfile.streak > 0 
+                ? 'text-orange-400 bg-orange-500/10 border-orange-500/30 shadow-[0_0_15px_rgba(249,115,22,0.3)]' 
+                : 'text-zinc-500 bg-zinc-800/50 border-zinc-700/50 grayscale opacity-70'
+            }`} title="Daily Streak">
+              <Flame className={`w-4 h-4 ${userProfile.streak > 0 ? 'fill-orange-500 text-orange-500' : 'fill-zinc-600 text-zinc-500'}`} />
+              {userProfile.streak} <span className="text-[10px] uppercase ml-1">Day Streak</span>
             </div>
             <div className="text-right">
               <div className="text-sm font-medium">{userProfile.displayName}</div>
