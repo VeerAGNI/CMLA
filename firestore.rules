@@ -80,6 +80,7 @@ service cloud.firestore {
              data.timeline is list && data.timeline.size() <= 50 &&
              (data.keys().hasAny(['strategy']) == false || (data.strategy is string && data.strategy.size() <= 5000)) &&
              (data.keys().hasAny(['rejectionReason']) == false || (data.rejectionReason is string && data.rejectionReason.size() <= 1000)) &&
+             (data.keys().hasAny(['appealReason']) == false || (data.appealReason is string && data.appealReason.size() <= 1000)) &&
              data.updatedAt is timestamp && incoming().updatedAt == request.time;
     }
 
@@ -93,9 +94,12 @@ service cloud.firestore {
         
       allow update: if isSignedIn() && isValidId(ideaId) && isValidIdeaUpdate(incoming()) && (
         (isStrategist() && existing().status in ['under_review', 'approved_pending_strategy'] && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'strategy', 'rejectionReason', 'timeline', 'updatedAt'])) ||
-        ((isCreator() || isBuilder()) && existing().status == 'rejected' && existing().appealUsed == false && incoming().status == 'appealed' && incoming().appealUsed == true && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'appealUsed', 'timeline', 'updatedAt'])) ||
-        (isBuilder() && existing().status in ['appealed', 'approved', 'building'] && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'timeline', 'updatedAt']))
+        ((isCreator() || isBuilder()) && existing().status == 'rejected' && existing().appealUsed == false && incoming().status == 'appealed' && incoming().appealUsed == true && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'appealUsed', 'appealReason', 'timeline', 'updatedAt'])) ||
+        (isBuilder() && existing().status in ['appealed', 'approved', 'building'] && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'timeline', 'updatedAt'])) ||
+        (isBuilder() && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'updatedAt']))
       );
+      
+      allow delete: if isSignedIn() && isValidId(ideaId) && isBuilder();
     }
   }
 }

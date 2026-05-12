@@ -37,7 +37,7 @@ export function Leaderboard() {
               <div className="font-mono text-zinc-500 text-xs w-4">{i + 1}.</div>
               <div>
                 <div className="text-sm font-semibold">{u.displayName}</div>
-                <div className="text-[10px] text-zinc-400 font-mono">{u.role}</div>
+                <div className="text-[10px] text-zinc-400 font-mono capitalize">{u.role}</div>
               </div>
             </div>
             

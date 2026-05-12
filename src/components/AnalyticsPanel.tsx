@@ -1,103 +1,188 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AppIdea, User } from '@/src/types';
-import { Activity, CheckCircle2, FlaskConical, Target } from 'lucide-react';
+import { db, handleFirestoreError, OperationType } from '@/src/lib/firebase';
+import { doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { Loader2, Edit2, Trash2 } from 'lucide-react';
 
 export function AnalyticsPanel({ ideas, userProfile }: { ideas: AppIdea[], userProfile: User }) {
-  const approvedIdeas = ideas.filter(i => ['approved', 'building', 'done'].includes(i.status)).length;
-  const inReviewIdeas = ideas.filter(i => ['under_review', 'approved_pending_strategy'].includes(i.status)).length;
-  const doneIdeas = ideas.filter(i => i.status === 'done').length;
-  const winRate = ideas.length > 0 ? Math.round((approvedIdeas / ideas.length) * 100) : 0;
+  const [appealingId, setAppealingId] = useState<string | null>(null);
+  const [appealReason, setAppealReason] = useState<string>('');
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [savingEdit, setSavingEdit] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const submitAppeal = async (idea: AppIdea) => {
+    setLoadingId(idea.id);
+    try {
+      const ideaRef = doc(db, 'ideas', idea.id);
+      
+      const newEvent: any = {
+        stage: 'appealed',
+        time: new Date().toISOString(),
+        by: userProfile.id,
+        note: `Appeal reason: ${appealReason}`
+      };
+
+      await updateDoc(ideaRef, {
+        status: 'appealed',
+        appealUsed: true,
+        appealReason: appealReason, // Store the specific reason
+        timeline: [...idea.timeline, newEvent],
+        updatedAt: serverTimestamp()
+      });
+      setAppealingId(null);
+      setAppealReason('');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `ideas/${idea.id}`);
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
+  const startEditing = (idea: AppIdea) => {
+    setEditingIdeaId(idea.id);
+    setEditTitle(idea.title);
+    setEditDesc(idea.description);
+  };
+
+  const handleSaveEdit = async (idea: AppIdea) => {
+    setSavingEdit(idea.id);
+    try {
+       await updateDoc(doc(db, 'ideas', idea.id), {
+         title: editTitle,
+         description: editDesc,
+         updatedAt: serverTimestamp()
+       });
+       setEditingIdeaId(null);
+    } catch(e) {
+       handleFirestoreError(e, OperationType.UPDATE, `ideas/${idea.id}`);
+    } finally {
+       setSavingEdit(null);
+    }
+  };
+
+  const handleDeleteIdea = async (ideaId: string) => {
+    setDeletingId(ideaId);
+    try {
+      await deleteDoc(doc(db, 'ideas', ideaId));
+    } catch (e) {
+      handleFirestoreError(e, OperationType.DELETE, `ideas/${ideaId}`);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
-    <div className="h-[calc(100vh-8rem)] overflow-y-auto pb-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-5xl mx-auto w-full px-4">
-      <div className="flex items-center gap-3 mb-8">
-        <Activity className="w-8 h-8 text-[var(--color-neon-purple)]" />
-        <h1 className="text-3xl font-bold tracking-tight">System Analytics</h1>
+    <div className="h-[calc(100vh-8rem)] overflow-y-auto pb-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl mx-auto w-full px-4">
+      <div className="mt-8 mb-6 flex items-center justify-between">
+        <h2 className="text-2xl font-bold tracking-tight">History</h2>
+        <div className="text-xs text-[var(--color-neon-blue)] font-bold uppercase tracking-widest bg-[var(--color-neon-blue)]/10 px-3 py-1 rounded-full border border-[var(--color-neon-blue)]/20">All System Inputs</div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-        <div className="glass p-6 rounded-2xl flex flex-col items-center justify-center text-center">
-          <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mb-4 text-[var(--color-neon-blue)]">
-            <Target className="w-6 h-6" />
-          </div>
-          <div className="text-4xl font-bold mb-1">{ideas.length}</div>
-          <div className="text-xs uppercase tracking-widest text-zinc-500 font-semibold">Total Drops</div>
-        </div>
-
-        <div className="glass p-6 rounded-2xl flex flex-col items-center justify-center text-center border-t-2 border-t-yellow-500/50">
-          <div className="w-12 h-12 bg-yellow-500/10 rounded-full flex items-center justify-center mb-4 text-yellow-400">
-            <FlaskConical className="w-6 h-6" />
-          </div>
-          <div className="text-4xl font-bold mb-1">{inReviewIdeas}</div>
-          <div className="text-xs uppercase tracking-widest text-zinc-500 font-semibold">In Review / Strategy</div>
-        </div>
-
-        <div className="glass p-6 rounded-2xl flex flex-col items-center justify-center text-center border-t-2 border-t-emerald-500/50">
-          <div className="w-12 h-12 bg-emerald-500/10 rounded-full flex items-center justify-center mb-4 text-emerald-400">
-            <CheckCircle2 className="w-6 h-6" />
-          </div>
-          <div className="text-4xl font-bold mb-1">{approvedIdeas}</div>
-          <div className="text-xs uppercase tracking-widest text-zinc-500 font-semibold">Approved</div>
-        </div>
-
-        <div className="glass p-6 rounded-2xl flex flex-col items-center justify-center text-center border-t-2 border-t-[var(--color-neon-purple)]">
-          <div className="w-12 h-12 bg-[var(--color-neon-purple)]/10 rounded-full flex items-center justify-center mb-4 text-[var(--color-neon-purple)]">
-            <Activity className="w-6 h-6" />
-          </div>
-          <div className="text-4xl font-bold mb-1">{winRate}%</div>
-          <div className="text-xs uppercase tracking-widest text-zinc-500 font-semibold">Win Rate</div>
-        </div>
-      </div>
-
-      <div className="glass rounded-2xl p-8 text-center">
-        <h2 className="text-xl font-bold mb-2">Detailed Breakdown</h2>
-        <p className="text-zinc-500 text-sm mb-6">More granular data points will be injected into this node soon.</p>
-        
-        <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden flex">
-          {ideas.length > 0 && (
-            <>
-              <div style={{ width: `${(doneIdeas / ideas.length) * 100}%` }} className="h-full bg-emerald-500" title="Done" />
-              <div style={{ width: `${((approvedIdeas - doneIdeas) / ideas.length) * 100}%` }} className="h-full bg-[var(--color-neon-blue)]" title="Approved/Building" />
-              <div style={{ width: `${(inReviewIdeas / ideas.length) * 100}%` }} className="h-full bg-yellow-500" title="In Review" />
-              <div className="h-full bg-red-500/50 flex-1" title="Rejected" />
-            </>
-          )}
-        </div>
-        <div className="flex justify-center gap-4 mt-4 text-xs font-medium text-zinc-400">
-          <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500"/> Done ({doneIdeas})</div>
-          <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-[var(--color-neon-blue)]"/> Build ({approvedIdeas - doneIdeas})</div>
-          <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-yellow-500"/> Rev ({inReviewIdeas})</div>
-          <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-red-500/50"/> Rej</div>
-        </div>
-      </div>
-
-      <div className="mt-8 mb-4 flex items-center justify-between">
-        <h2 className="text-xl font-bold">Full Idea Log</h2>
-        <div className="text-xs text-zinc-500 font-bold uppercase tracking-widest">All System Inputs</div>
-      </div>
-
-      <div className="space-y-3">
+      <div className="space-y-4">
         {ideas.map(idea => (
-          <div key={idea.id} className="glass p-4 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div>
-              <div className="font-bold text-lg mb-1">{idea.title}</div>
-              <div className="text-zinc-400 text-sm line-clamp-1">{idea.description}</div>
+          <div key={idea.id} className="bg-black/20 border border-white/5 p-5 rounded-2xl flex flex-col md:flex-row items-start justify-between gap-4 hover:bg-black/30 transition shadow-lg">
+            <div className="flex-1 pr-4 w-full">
+              {editingIdeaId === idea.id ? (
+                <div className="animate-in fade-in duration-200">
+                  <input 
+                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-white mb-2 focus:border-[var(--color-neon-blue)] outline-none font-semibold" 
+                    value={editTitle} 
+                    onChange={e => setEditTitle(e.target.value)} 
+                  />
+                  <textarea 
+                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-zinc-300 text-sm h-24 resize-none mb-3 focus:border-[var(--color-neon-blue)] outline-none leading-relaxed" 
+                    value={editDesc} 
+                    onChange={e => setEditDesc(e.target.value)} 
+                  />
+                  <div className="flex gap-2">
+                    <button onClick={() => setEditingIdeaId(null)} className="px-3 py-1.5 rounded-lg border border-white/10 text-xs font-bold text-zinc-400 hover:text-white hover:bg-white/5 transition">CANCEL</button>
+                    <button onClick={() => handleSaveEdit(idea)} disabled={savingEdit === idea.id} className="px-4 py-1.5 rounded-lg bg-[var(--color-neon-blue)]/20 text-[var(--color-neon-blue)] text-xs font-bold flex items-center justify-center gap-2 hover:bg-[var(--color-neon-blue)]/30 transition">
+                      {savingEdit === idea.id ? <Loader2 className="w-3 h-3 animate-spin"/> : 'SAVE EDITS'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="font-bold text-lg mb-1 text-zinc-100 leading-tight flex items-center gap-2 flex-wrap">
+                    {idea.title}
+                    {userProfile.role === 'builder' && (
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => startEditing(idea)} className="p-1.5 hover:bg-white/10 rounded-md text-zinc-500 hover:text-[var(--color-neon-blue)] transition shrink-0">
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => handleDeleteIdea(idea.id)} disabled={deletingId === idea.id} className="p-1.5 hover:bg-white/10 rounded-md text-zinc-500 hover:text-red-400 transition shrink-0">
+                          {deletingId === idea.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-zinc-400 text-sm line-clamp-2 md:line-clamp-none leading-relaxed break-words">{idea.description}</div>
+                </>
+              )}
             </div>
-            <div className="flex items-center gap-3 shrink-0">
-              <span className={`text-[10px] uppercase tracking-widest font-bold px-2 py-1 rounded bg-white/5 border border-white/10 ${
-                idea.status === 'done' ? 'text-emerald-400' :
-                ['approved', 'building'].includes(idea.status) ? 'text-[var(--color-neon-blue)]' :
-                ['rejected', 'final_rejected'].includes(idea.status) ? 'text-red-400' :
-                idea.status === 'appealed' ? 'text-[var(--color-neon-purple)]' :
-                'text-yellow-400'
+            
+            <div className="flex flex-col items-end gap-3 shrink-0 mt-2 md:mt-0 w-full md:w-auto">
+              <span className={`text-[10px] uppercase tracking-widest font-bold px-2 py-1 rounded bg-white/5 border border-white/10 whitespace-nowrap ${
+                idea.status === 'done' ? 'text-emerald-400 border-emerald-400/20 bg-emerald-400/5' :
+                ['approved', 'building'].includes(idea.status) ? 'text-[var(--color-neon-blue)] border-[var(--color-neon-blue)]/20 bg-[var(--color-neon-blue)]/5' :
+                ['rejected', 'final_rejected'].includes(idea.status) ? 'text-red-400 border-red-400/20 bg-red-400/5' :
+                idea.status === 'appealed' ? 'text-[var(--color-neon-purple)] border-[var(--color-neon-purple)]/20 bg-[var(--color-neon-purple)]/5' :
+                'text-yellow-400 border-yellow-400/20 bg-yellow-400/5'
               }`}>
                 {idea.status.replace(/_/g, ' ')}
               </span>
+              
+              {/* If Rejected and user is creator: Allow Appeal */}
+              {idea.status === 'rejected' && userProfile.id === idea.createdBy && !idea.appealUsed && (
+                <>
+                  {appealingId === idea.id ? (
+                    <div className="flex flex-col gap-2 w-full min-w-[200px] mt-2 animate-in fade-in zoom-in-95">
+                      <input
+                        value={appealReason}
+                        onChange={(e) => setAppealReason(e.target.value)}
+                        placeholder="Why should this be appealed?"
+                        className="bg-black/40 border border-[var(--color-neon-purple)]/30 px-3 py-2 rounded-lg text-xs text-white focus:outline-none focus:border-[var(--color-neon-purple)] transition"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            setAppealingId(null);
+                            setAppealReason('');
+                          }}
+                          className="flex-1 py-1.5 text-xs text-zinc-400 hover:text-white rounded-lg transition"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => submitAppeal(idea)}
+                          disabled={!appealReason || loadingId === idea.id}
+                          className="flex-1 py-1.5 bg-[var(--color-neon-purple)]/20 hover:bg-[var(--color-neon-purple)]/30 text-[var(--color-neon-purple)] rounded-lg text-xs font-bold transition flex justify-center items-center gap-2"
+                        >
+                          {loadingId === idea.id ? <Loader2 className="w-3 h-3 animate-spin"/> : 'Submit Appeal'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => setAppealingId(idea.id)}
+                      className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-[var(--color-neon-purple)]/30 hover:border-[var(--color-neon-purple)]/50 text-[var(--color-neon-purple)] rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 w-full md:w-auto"
+                    >
+                      APPEAL REJECTION
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           </div>
         ))}
         {ideas.length === 0 && (
-          <div className="text-center text-zinc-500 py-8">No data points logged yet</div>
+          <div className="text-center text-zinc-500 py-12 bg-black/20 rounded-2xl border border-white/5 border-dashed">
+            No pipeline history found.
+          </div>
         )}
       </div>
     </div>

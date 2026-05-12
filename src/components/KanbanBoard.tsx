@@ -11,38 +11,29 @@ interface KanbanBoardProps {
 export function KanbanBoard({ ideas, userProfile, effectiveRole }: KanbanBoardProps) {
   let columns: { id: string; statuses: IdeaStatus[]; title: string; color: string }[] = [];
   
-  if (effectiveRole === 'creator') {
+  if (effectiveRole === 'strategist') {
     columns = [
-      { id: 'rejected', statuses: ['rejected'], title: 'Action Required', color: 'text-red-400' },
-      { id: 'appealed', statuses: ['appealed'], title: 'Appealed', color: 'text-[var(--color-neon-purple)]' }
-    ];
-  } else if (effectiveRole === 'strategist') {
-    columns = [
-      { id: 'inbox', statuses: ['under_review'], title: 'Pending Review', color: 'text-zinc-400' },
-      { id: 'strategy', statuses: ['approved_pending_strategy'], title: 'Needs Strategy', color: 'text-[var(--color-neon-purple)]' }
+      { id: 'inbox', statuses: ['under_review'], title: 'Review / Revision Request', color: 'text-yellow-400' }
     ];
   } else if (effectiveRole === 'builder') {
     columns = [
-      { id: 'appeals', statuses: ['appealed'], title: 'Appeals', color: 'text-[var(--color-neon-purple)]' },
-      { id: 'build_queue', statuses: ['approved'], title: 'Build Queue', color: 'text-zinc-400' },
-      { id: 'building', statuses: ['building'], title: 'In Progress', color: 'text-[var(--color-neon-blue)]' }
+      { id: 'build_queue', statuses: ['approved', 'building'], title: 'Build Queue', color: 'text-zinc-400' },
+      { id: 'appeals', statuses: ['appealed'], title: 'Appeals', color: 'text-[var(--color-neon-purple)]' }
     ];
   } else {
-    // Default fallback
-    columns = [
-      { id: 'all_inbox', statuses: ['under_review'], title: 'Initial Drop', color: 'text-zinc-400' }
-    ];
+    // Hidden for others (e.g. Creator)
+    return null;
   }
 
   // All team members can see all ideas on their boards
   const filteredIdeas = ideas;
 
   return (
-    <div className="h-full flex gap-4 overflow-x-auto pb-4 hide-scrollbar snap-x snap-mandatory">
+    <div className={`h-full flex gap-6 overflow-x-auto pb-4 hide-scrollbar snap-x snap-mandatory`}>
       {columns.map(col => {
         const colIdeas = filteredIdeas.filter(i => col.statuses.includes(i.status));
         return (
-          <div key={col.id} className="glass rounded-2xl p-4 min-w-[320px] w-[320px] max-w-[320px] flex flex-col snap-center max-h-full">
+          <div key={col.id} className={`glass rounded-2xl p-5 flex flex-col snap-center max-h-full min-w-[320px] w-[320px] max-w-[320px]`}>
             <div className="flex items-center justify-between mb-4 px-1">
               <h3 className={`text-xs font-bold tracking-widest uppercase ${col.color}`}>
                 {col.title}

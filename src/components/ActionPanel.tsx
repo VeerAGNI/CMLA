@@ -2,17 +2,17 @@ import React, { useState } from 'react';
 import { User } from '@/src/types';
 import { db, handleFirestoreError, OperationType } from '@/src/lib/firebase';
 import { collection, doc, setDoc, serverTimestamp, updateDoc, increment } from 'firebase/firestore';
-import { PlusCircle, Loader2 } from 'lucide-react';
+import { Loader2, Zap, Rocket } from 'lucide-react';
 
 interface ActionPanelProps {
   userProfile: User;
 }
 
 export function ActionPanel({ userProfile }: ActionPanelProps) {
-  const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showRocket, setShowRocket] = useState(false);
 
   const handleDropIdea = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +24,8 @@ export function ActionPanel({ userProfile }: ActionPanelProps) {
       const timelineEvent = {
         stage: 'under_review',
         time: new Date().toISOString(),
-        by: userProfile.id
+        by: userProfile.id,
+        note: 'Idea submitted.'
       };
 
       await setDoc(newIdeaRef, {
@@ -38,18 +39,42 @@ export function ActionPanel({ userProfile }: ActionPanelProps) {
         updatedAt: serverTimestamp()
       });
 
-      const today = new Date().toISOString().split('T')[0];
-      if (userProfile.lastDropDate !== today) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const dropDateStr = today.toISOString().split('T')[0];
+      
+      let newStreak = userProfile.streak || 0;
+      
+      if (userProfile.lastDropDate) {
+        const lastDrop = new Date(userProfile.lastDropDate);
+        lastDrop.setHours(0, 0, 0, 0);
+        const diffTime = today.getTime() - lastDrop.getTime();
+        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays === 1) {
+          newStreak += 1;
+        } else if (diffDays > 1) {
+          newStreak = 1;
+        }
+      } else {
+        newStreak = 1;
+      }
+
+      if (userProfile.lastDropDate !== dropDateStr || newStreak !== userProfile.streak) {
         await updateDoc(doc(db, 'users', userProfile.id), {
-          lastDropDate: today,
-          streak: increment(1),
+          lastDropDate: dropDateStr,
+          streak: newStreak,
           updatedAt: serverTimestamp()
         });
       }
 
       setTitle('');
       setDesc('');
-      setIsOpen(false);
+      
+      // Rocket animation
+      setShowRocket(true);
+      setTimeout(() => setShowRocket(false), 2500);
+      
     } catch (err) {
       handleFirestoreError(err, OperationType.CREATE, 'ideas');
     } finally {
@@ -58,58 +83,60 @@ export function ActionPanel({ userProfile }: ActionPanelProps) {
   };
 
   return (
-    <div className="glass rounded-2xl p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-bold tracking-widest text-[var(--color-neon-blue)]">Idea Vault</h2>
-        <div className="text-[10px] text-emerald-400 font-bold bg-emerald-400/10 px-2 py-0.5 rounded uppercase tracking-widest border border-emerald-400/20">Open</div>
+    <div className="glass rounded-3xl p-8 relative overflow-hidden ring-1 ring-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)]">
+      <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--color-neon-blue)]/5 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+      
+      {showRocket && (
+        <div className="fixed inset-0 z-[100] pointer-events-none flex items-center justify-center overflow-hidden">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" />
+          <div className="animate-[rocket-launch_2.5s_ease-in-out_forwards] relative flex flex-col items-center">
+            <Rocket className="w-48 h-48 text-[var(--color-neon-blue)] drop-shadow-[0_0_40px_rgba(0,240,255,0.8)] fill-current -rotate-45 relative z-10" />
+            <div className="w-16 h-[500px] bg-gradient-to-b from-[var(--color-neon-blue)] via-[var(--color-neon-purple)] to-transparent blur-xl opacity-80 -mt-8" />
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between mb-8 relative">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-white mb-1">Idea Bulb</h2>
+          <p className="text-xs text-zinc-400 font-mono tracking-widest uppercase">What you think is what we need</p>
+        </div>
+        <div className="flex items-center gap-2 text-[10px] text-[var(--color-neon-blue)] font-bold bg-[var(--color-neon-blue)]/10 px-3 py-1 rounded-full uppercase tracking-widest border border-[var(--color-neon-blue)]/20 shadow-[0_0_15px_rgba(0,240,255,0.2)]">
+          <Zap className="w-3 h-3 fill-current" />
+          System Ready
+        </div>
       </div>
 
-      {!isOpen ? (
-        <button
-          onClick={() => setIsOpen(true)}
-          className="w-full bg-white/5 hover:bg-white/10 border border-white/10 transition rounded-xl p-4 flex flex-col items-center justify-center gap-2 text-zinc-400 hover:text-[var(--color-neon-blue)]"
-        >
-          <PlusCircle className="w-6 h-6" />
-          <span className="text-xs font-semibold tracking-widest">SUBMIT NEW IDEA</span>
-        </button>
-      ) : (
-        <form onSubmit={handleDropIdea} className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
+      <form onSubmit={handleDropIdea} className="space-y-6 relative">
+        <div className="space-y-4">
           <input
             autoFocus
             type="text"
-            placeholder="Execution Title..."
+            placeholder="Your idea.."
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full bg-zinc-900/50 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-neon-blue)] transition font-mono"
+            className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-4 text-lg text-white focus:outline-none focus:border-[var(--color-neon-blue)]/50 focus:bg-white/5 transition font-semibold"
             required
             maxLength={100}
           />
           <textarea
-            placeholder="Hypothesis & details..."
+            placeholder="Your description.."
             value={desc}
             onChange={(e) => setDesc(e.target.value)}
-            className="w-full bg-zinc-900/50 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-neon-blue)] transition h-24 resize-none"
+            className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-4 text-base text-zinc-300 focus:outline-none focus:border-[var(--color-neon-blue)]/50 focus:bg-white/5 transition h-40 resize-none leading-relaxed"
             required
             maxLength={2000}
           />
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              className="flex-1 px-4 py-2 text-xs font-semibold tracking-widest bg-white/5 hover:bg-white/10 rounded-lg transition"
-            >
-              CANCEL
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 px-4 py-2 text-xs font-semibold tracking-widest bg-[var(--color-neon-blue)] text-zinc-950 hover:bg-opacity-90 rounded-lg transition flex items-center justify-center gap-2"
-            >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'SUBMIT'}
-            </button>
-          </div>
-        </form>
-      )}
+        </div>
+        
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full py-4 text-sm font-bold tracking-widest bg-[var(--color-neon-blue)] text-black hover:bg-white hover:text-black hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] rounded-xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
+        >
+          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'SUBMIT'}
+        </button>
+      </form>
     </div>
   );
 }

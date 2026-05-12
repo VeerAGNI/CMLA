@@ -18,7 +18,7 @@ export type TimelineEvent = {
   by: string; // The user ID or name who made the change
 }
 
-export type IdeaStatus = 'under_review' | 'rejected' | 'appealed' | 'approved_pending_strategy' | 'approved' | 'building' | 'done' | 'final_rejected';
+export type IdeaStatus = 'under_review' | 'rejected' | 'appealed' | 'approved' | 'building' | 'done' | 'final_rejected';
 
 export interface AppIdea {
   id: string;
@@ -28,6 +28,7 @@ export interface AppIdea {
   status: IdeaStatus;
   strategy?: string;
   rejectionReason?: string;
+  appealReason?: string;
   appealUsed: boolean;
   timeline: TimelineEvent[];
   createdAt: string;

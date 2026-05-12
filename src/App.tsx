@@ -9,12 +9,42 @@ import { Role } from '@/src/types';
 
 export type TabType = 'pipeline' | 'leaderboard' | 'analytics';
 
+function WelcomeBanner({ name }: { name: string }) {
+  const [visible, setVisible] = useState(true);
+  const [render, setRender] = useState(true);
+
+  useEffect(() => {
+    // Start fade out
+    const t = setTimeout(() => setVisible(false), 2000);
+    // Remove from DOM
+    const t2 = setTimeout(() => setRender(false), 2500);
+    return () => {
+      clearTimeout(t);
+      clearTimeout(t2);
+    };
+  }, []);
+  
+  if (!render) return null;
+  
+  return (
+    <div className={`fixed inset-0 z-[200] flex items-center justify-center bg-zinc-950/95 backdrop-blur-md transition-all duration-500 ${visible ? 'opacity-100' : 'opacity-0 scale-105 pointer-events-none'}`}>
+      <div className={`text-center transition-all duration-700 transform ${visible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
+        <h1 className="text-4xl md:text-6xl font-bold tracking-tighter text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.2)]">
+          Welcome, <span className="text-[var(--color-neon-blue)]">{name}</span>
+        </h1>
+        <p className="mt-4 text-zinc-400 font-mono text-sm tracking-widest uppercase">Pipeline System Initialized</p>
+      </div>
+    </div>
+  );
+}
+
 function AppContent() {
   const { userProfile, loading, signIn, signOut } = useAuth();
   const [overrideRole, setOverrideRole] = useState<Role | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('pipeline');
   const [showGuide, setShowGuide] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
     // Theme init
@@ -27,6 +57,9 @@ function AppContent() {
       const hasSeen = localStorage.getItem('pipeline_has_seen_guide');
       if (!hasSeen) {
         setShowGuide(true);
+      } else if (!sessionStorage.getItem('pipeline_welcome_shown')) {
+        setShowWelcome(true);
+        sessionStorage.setItem('pipeline_welcome_shown', 'true');
       }
     }
   }, [userProfile]);
@@ -34,6 +67,7 @@ function AppContent() {
   const handleCloseGuide = () => {
     localStorage.setItem('pipeline_has_seen_guide', 'true');
     setShowGuide(false);
+    setShowWelcome(true);
   };
 
   if (loading || !userProfile) {
@@ -46,6 +80,7 @@ function AppContent() {
 
   return (
     <div className="min-h-screen flex flex-col bg-zinc-950">
+      {showWelcome && <WelcomeBanner name={userProfile.displayName} />}
       {showGuide && <OnboardingGuide onClose={handleCloseGuide} />}
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} onShowGuide={() => setShowGuide(true)} />}
 
@@ -86,7 +121,7 @@ function AppContent() {
                     : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
                 }`}
               >
-                {tab}
+                {tab === 'pipeline' ? 'work' : tab}
               </button>
             ))}
           </div>

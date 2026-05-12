@@ -28,38 +28,38 @@ export function OnboardingGuide({ onClose }: { onClose: () => void }) {
                 <Lightbulb className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="font-semibold text-white">1. Idea Vault</h3>
-                <p className="text-sm text-zinc-400 mt-1">Submit your new execution ideas anytime. No time restrictions. The more detailed, the better.</p>
+                <h3 className="font-semibold text-white">1. Creator Drops the Idea</h3>
+                <p className="text-sm text-zinc-400 mt-1">Creators submit new ideas into the system. It instantly enters the Pending Review queue.</p>
               </div>
             </div>
             
             <div className="flex gap-4">
-              <div className="mt-1 flex-shrink-0 w-8 h-8 rounded-full bg-[var(--color-neon-purple)]/10 text-[var(--color-neon-purple)] flex items-center justify-center">
+              <div className="mt-1 flex-shrink-0 w-8 h-8 rounded-full bg-yellow-500/10 text-yellow-400 flex items-center justify-center">
                 <TrendingUp className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="font-semibold text-white">2. The Pipeline</h3>
-                <p className="text-sm text-zinc-400 mt-1">Ideas move through different stages. Review, strategy, building, and deployment. Keep track of progress seamlessly.</p>
-              </div>
-            </div>
-            
-            <div className="flex gap-4">
-              <div className="mt-1 flex-shrink-0 w-8 h-8 rounded-full bg-orange-500/10 text-orange-400 flex items-center justify-center">
-                <Presentation className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-white">3. Streaks & Analytics</h3>
-                <p className="text-sm text-zinc-400 mt-1">Consistency is key. Submit ideas to build your daily streak. Higher streaks boost your position on the Leaderboard.</p>
+                <h3 className="font-semibold text-white">2. Strategist Reviews</h3>
+                <p className="text-sm text-zinc-400 mt-1">The Strategist evaluates the drop. They can either Reject it (with a reason) or Accept it by attaching a strategy plan.</p>
               </div>
             </div>
 
             <div className="flex gap-4">
-              <div className="mt-1 flex-shrink-0 w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+              <div className="mt-1 flex-shrink-0 w-8 h-8 rounded-full bg-[var(--color-neon-purple)]/10 text-[var(--color-neon-purple)] flex items-center justify-center">
                 <ShieldCheck className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="font-semibold text-white">4. Roles</h3>
-                <p className="text-sm text-zinc-400 mt-1">Creators drop ideas. Strategists review and plan. Builders execute. All roles are crucial to the pipeline.</p>
+                <h3 className="font-semibold text-white">3. Appeals (Optional)</h3>
+                <p className="text-sm text-zinc-400 mt-1">If an idea is rejected, Creators can Appeal it once. Builders handle appeals—they can veto or approve the appeal back into the pipeline.</p>
+              </div>
+            </div>
+            
+            <div className="flex gap-4">
+              <div className="mt-1 flex-shrink-0 w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                <Presentation className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white">4. Builder Execution</h3>
+                <p className="text-sm text-zinc-400 mt-1">Approved ideas enter the Build Queue. the Builder starts the build (In Progress) and eventually marks it as Done.</p>
               </div>
             </div>
           </div>

@@ -35,6 +35,14 @@
   }
 }
 
+@keyframes rocket-launch {
+  0% { transform: translateY(100vh) scale(0.5); opacity: 0; }
+  20% { transform: translateY(20vh) scale(1.2); opacity: 1; }
+  40% { transform: translateY(0vh) scale(1); opacity: 1; }
+  80% { transform: translateY(-20vh) scale(1); opacity: 1; }
+  100% { transform: translateY(-100vh) scale(0.8); opacity: 0; }
+}
+
 body {
   @apply bg-zinc-950 text-zinc-50 font-sans antialiased min-h-screen transition-colors duration-300 selection:bg-[var(--color-neon-purple)] selection:text-white;
   background-image: 

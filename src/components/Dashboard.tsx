@@ -20,7 +20,7 @@ export function Dashboard({ userProfile, effectiveRole, activeTab }: DashboardPr
   useEffect(() => {
     const q = query(
       collection(db, 'ideas'),
-      where('status', 'in', ['under_review', 'rejected', 'appealed', 'approved', 'approved_pending_strategy', 'building', 'done', 'final_rejected'])
+      where('status', 'in', ['under_review', 'rejected', 'appealed', 'approved', 'building', 'done', 'final_rejected'])
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as AppIdea);
@@ -47,15 +47,20 @@ export function Dashboard({ userProfile, effectiveRole, activeTab }: DashboardPr
   return (
     <>
       {activeTab === 'pipeline' && (
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 h-[calc(100vh-8rem)]">
-          <div className="xl:col-span-1 space-y-6 flex flex-col h-full uppercase tracking-wide">
-            <ActionPanel userProfile={userProfile} />
-          </div>
-          <div className="xl:col-span-3 h-full overflow-hidden flex flex-col">
-            <div className="flex-1 overflow-hidden">
+        <div className="h-[calc(100vh-8rem)] px-4 pb-8 overflow-y-auto hide-scrollbar">
+          {effectiveRole === 'creator' && (
+            <div className="flex flex-col gap-8 max-w-4xl mx-auto w-full pt-4 h-full items-center justify-center">
+              <div className="shrink-0 w-full lg:w-3/4 mx-auto">
+                <ActionPanel userProfile={userProfile} />
+              </div>
+            </div>
+          )}
+          
+          {effectiveRole !== 'creator' && (
+            <div className="h-full pt-4 max-w-[1400px] mx-auto w-full">
               <KanbanBoard ideas={ideas} userProfile={userProfile} effectiveRole={effectiveRole} />
             </div>
-          </div>
+          )}
         </div>
       )}
 
