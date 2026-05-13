@@ -71,9 +71,17 @@ export function ActionPanel({ userProfile }: ActionPanelProps) {
       setTitle('');
       setDesc('');
       
-      // Rocket animation
+        // Rocket animation
       setShowRocket(true);
-      setTimeout(() => setShowRocket(false), 2500);
+      setTimeout(() => {
+        setShowRocket(false);
+        // Dispatch streak animation after rocket finishes
+        window.dispatchEvent(
+          new CustomEvent('show-streak', { 
+            detail: { role: 'creator', points: 0, streak: newStreak }
+          })
+        );
+      }, 2500);
       
     } catch (err) {
       handleFirestoreError(err, OperationType.CREATE, 'ideas');
@@ -90,7 +98,7 @@ export function ActionPanel({ userProfile }: ActionPanelProps) {
         <div className="fixed inset-0 z-[100] pointer-events-none flex items-center justify-center overflow-hidden">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" />
           <div className="animate-[rocket-launch_2.5s_ease-in-out_forwards] relative flex flex-col items-center">
-            <Rocket className="w-48 h-48 text-[var(--color-neon-blue)] drop-shadow-[0_0_40px_rgba(0,240,255,0.8)] fill-current -rotate-45 relative z-10" />
+            <Rocket className="w-48 h-48 text-[var(--color-neon-blue)] drop-shadow-[0_0_40px_rgba(0,240,255,0.8)] fill-current relative z-10" />
             <div className="w-16 h-[500px] bg-gradient-to-b from-[var(--color-neon-blue)] via-[var(--color-neon-purple)] to-transparent blur-xl opacity-80 -mt-8" />
           </div>
         </div>

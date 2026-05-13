@@ -131,6 +131,7 @@ export function AnalyticsPanel({ ideas, userProfile }: { ideas: AppIdea[], userP
                 ['approved', 'building'].includes(idea.status) ? 'text-[var(--color-neon-blue)] border-[var(--color-neon-blue)]/20 bg-[var(--color-neon-blue)]/5' :
                 ['rejected', 'final_rejected'].includes(idea.status) ? 'text-red-400 border-red-400/20 bg-red-400/5' :
                 idea.status === 'appealed' ? 'text-[var(--color-neon-purple)] border-[var(--color-neon-purple)]/20 bg-[var(--color-neon-purple)]/5' :
+                idea.status === 'postponed' ? 'text-orange-400 border-orange-400/20 bg-orange-400/5' :
                 'text-yellow-400 border-yellow-400/20 bg-yellow-400/5'
               }`}>
                 {idea.status.replace(/_/g, ' ')}

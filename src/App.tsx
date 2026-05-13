@@ -5,6 +5,7 @@ import { Dashboard } from './components/Dashboard';
 import { RoleClaim } from './components/RoleClaim';
 import { OnboardingGuide } from './components/OnboardingGuide';
 import { SettingsModal } from './components/SettingsModal';
+import { StreakAnimation } from './components/StreakAnimation';
 import { Role } from '@/src/types';
 
 export type TabType = 'pipeline' | 'leaderboard' | 'analytics';
@@ -190,6 +191,7 @@ export default function App() {
   return (
     <AuthProvider>
       <AppContent />
+      <StreakAnimation />
     </AuthProvider>
   );
 }

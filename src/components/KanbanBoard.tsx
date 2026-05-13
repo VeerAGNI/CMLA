@@ -15,14 +15,15 @@ export function KanbanBoard({ ideas, userProfile, effectiveRole }: KanbanBoardPr
     columns = [
       { id: 'inbox', statuses: ['under_review'], title: 'Review / Revision Request', color: 'text-yellow-400' }
     ];
-  } else if (effectiveRole === 'builder') {
+  } else if (effectiveRole === 'builder' || effectiveRole === 'archived_builder' as string) {
     columns = [
-      { id: 'build_queue', statuses: ['approved', 'building'], title: 'Build Queue', color: 'text-zinc-400' },
-      { id: 'appeals', statuses: ['appealed'], title: 'Appeals', color: 'text-[var(--color-neon-purple)]' }
+      { id: 'build_queue', statuses: ['approved', 'building'], title: 'Build Queue', color: 'text-[var(--color-neon-blue)]' },
+      { id: 'appeals', statuses: ['appealed'], title: 'Appeals', color: 'text-[var(--color-neon-purple)]' },
+      { id: 'postponed', statuses: ['postponed'], title: 'Postponed', color: 'text-orange-400' }
     ];
   } else {
-    // Hidden for others (e.g. Creator)
-    return null;
+    // Other unsupported roles
+    columns = [];
   }
 
   // All team members can see all ideas on their boards
