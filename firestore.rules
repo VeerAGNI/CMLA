@@ -16,15 +16,15 @@ service cloud.firestore {
     }
     function isBuilder() { 
       let data = getUserData();
-      return data != null && data.role == 'builder'; 
+      return data != null && (data.role == 'builder' || data.role == 'archived_builder'); 
     }
     function isCreator() { 
       let data = getUserData();
-      return data != null && (data.role == 'creator' || data.role == 'builder'); 
+      return data != null && (data.role == 'creator' || data.role == 'builder' || data.role == 'archived_creator' || data.role == 'archived_builder'); 
     }
     function isStrategist() { 
       let data = getUserData();
-      return data != null && (data.role == 'strategist' || data.role == 'builder'); 
+      return data != null && (data.role == 'strategist' || data.role == 'builder' || data.role == 'archived_strategist' || data.role == 'archived_builder'); 
     }
     
     // Users Collection (No PII stored here, just displayName, role, points, streak, etc)

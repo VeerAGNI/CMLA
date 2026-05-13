@@ -16,7 +16,7 @@ export function Leaderboard() {
     // We'll show all users for admins/builders so they can be edited if needed
     const q = query(
       collection(db, 'users'),
-      where('role', 'in', ['creator', 'strategist', 'builder', 'archived_builder'])
+      where('role', 'in', ['creator', 'strategist', 'builder', 'archived_creator', 'archived_strategist', 'archived_builder'])
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
@@ -98,7 +98,7 @@ export function Leaderboard() {
                   <div className="font-mono text-sm text-[var(--color-neon-blue)] tabular-nums">
                     {u.points} <span className="text-[10px] text-zinc-500 uppercase">pts</span>
                   </div>
-                  {userProfile?.role === 'builder' && (
+                  {(userProfile?.role === 'builder' || userProfile?.role === 'archived_builder') && (
                     <button onClick={() => { setEditingUserId(u.id); setEditStreak(u.streak || 0); setEditPoints(u.points || 0); }} className="p-1.5 text-zinc-500 hover:bg-white/10 rounded transition">
                       <Edit2 className="w-3 h-3" />
                     </button>
