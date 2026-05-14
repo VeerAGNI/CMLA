@@ -6,6 +6,7 @@ import { KanbanBoard } from './KanbanBoard';
 import { Leaderboard } from './Leaderboard';
 import { ActionPanel } from './ActionPanel';
 import { AnalyticsPanel } from './AnalyticsPanel';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface DashboardProps {
   userProfile: User;
@@ -20,7 +21,7 @@ export function Dashboard({ userProfile, effectiveRole, activeTab }: DashboardPr
   useEffect(() => {
     const q = query(
       collection(db, 'ideas'),
-      where('status', 'in', ['under_review', 'rejected', 'appealed', 'approved', 'building', 'done', 'final_rejected'])
+      where('status', 'in', ['under_review', 'rejected', 'appealed', 'approved', 'building', 'done', 'final_rejected', 'postponed'])
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as AppIdea);
@@ -44,35 +45,40 @@ export function Dashboard({ userProfile, effectiveRole, activeTab }: DashboardPr
     return <div className="text-zinc-500 animate-pulse text-center mt-12">Loading Pipeline...</div>;
   }
 
+  const animationProps = {
+    initial: { opacity: 0, y: 10, scale: 0.98 },
+    animate: { opacity: 1, y: 0, scale: 1 },
+    exit: { opacity: 0, y: -10, scale: 0.98 },
+    transition: { duration: 0.2, ease: "easeOut" }
+  };
+
   return (
-    <>
+    <AnimatePresence mode="wait">
       {activeTab === 'pipeline' && (
-        <div className="h-[calc(100vh-8rem)] px-4 pb-8 overflow-y-auto hide-scrollbar">
+        <motion.div key="pipeline" {...animationProps} className="h-[calc(100vh-8rem)] w-full px-4 pb-8 overflow-y-auto hide-scrollbar flex flex-col xl:flex-row gap-8 max-w-[1600px] mx-auto">
           {effectiveRole === 'creator' && (
-            <div className="flex flex-col gap-8 max-w-4xl mx-auto w-full pt-4 h-full items-center justify-center">
-              <div className="shrink-0 w-full lg:w-3/4 mx-auto">
-                <ActionPanel userProfile={userProfile} />
-              </div>
+            <div className="w-full xl:w-[400px] shrink-0 pt-4">
+              <ActionPanel userProfile={userProfile} />
             </div>
           )}
           
-          {effectiveRole !== 'creator' && (
-            <div className="h-full pt-4 max-w-[1400px] mx-auto w-full">
-              <KanbanBoard ideas={ideas} userProfile={userProfile} effectiveRole={effectiveRole} />
-            </div>
-          )}
-        </div>
+          <div className="flex-1 min-w-0 pt-4 h-full xl:overflow-hidden">
+            <KanbanBoard ideas={ideas} userProfile={userProfile} effectiveRole={effectiveRole} />
+          </div>
+        </motion.div>
       )}
 
       {activeTab === 'leaderboard' && (
-        <div className="h-[calc(100vh-8rem)] flex items-start justify-center max-w-2xl mx-auto w-full">
+        <motion.div key="leaderboard" {...animationProps} className="h-[calc(100vh-8rem)] flex items-start justify-center max-w-2xl mx-auto w-full">
           <Leaderboard />
-        </div>
+        </motion.div>
       )}
 
       {activeTab === 'analytics' && (
-        <AnalyticsPanel ideas={ideas} userProfile={userProfile} />
+        <motion.div key="analytics" {...animationProps}>
+          <AnalyticsPanel ideas={ideas} userProfile={userProfile} />
+        </motion.div>
       )}
-    </>
+    </AnimatePresence>
   );
 }

@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { AppIdea, User, IdeaStatus, Role } from '@/src/types';
 import { db, handleFirestoreError, OperationType } from '@/src/lib/firebase';
 import { doc, updateDoc, serverTimestamp, increment } from 'firebase/firestore';
-import { ChevronDown, ChevronUp, AlertCircle, ArrowRightCircle, Play, CheckCircle2, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, AlertCircle, ArrowRightCircle, Play, CheckCircle2, X, Sparkles } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { createPortal } from 'react-dom';
+import { GoogleGenAI } from '@google/genai';
+import { motion, AnimatePresence } from 'motion/react';
 
 export interface IdeaCardProps {
   idea: AppIdea;
@@ -18,8 +20,44 @@ export function IdeaCard({ idea, userProfile, effectiveRole }: IdeaCardProps) {
   const [strategyInput, setStrategyInput] = useState('');
   const [rejectInput, setRejectInput] = useState('');
   const [postponeInput, setPostponeInput] = useState('');
-  const [actionState, setActionState] = useState<'none' | 'reject' | 'strategize' | 'postpone'>('none');
+  const [actionState, setActionState] = useState<'none' | 'reject' | 'strategize' | 'postpone' | 'ai_plan'>('none');
   const [loading, setLoading] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [generatedPrompt, setGeneratedPrompt] = useState<string>('');
+
+  const handleGenerateAIPlan = async () => {
+    setAiLoading(true);
+    setGeneratedPrompt('');
+    try {
+      if (!process.env.GEMINI_API_KEY) {
+        throw new Error("GEMINI_API_KEY is not defined. Please check environment variables.");
+      }
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      // Generate a structured prompt for AutoForge
+      const promptText = `
+        Analyze this idea request and output a precise, practical strategy prompt that can be directly passed to AutoForge (an AI Agent builder).
+        
+        App Title: ${idea.title}
+        Description: ${idea.description}
+        Strategist Notes: ${idea.strategy || "None"}
+        
+        Output *only* the raw prompt, including:
+        - The absolute core goal of the app.
+        - Primary features to be implemented.
+        - Database structure (if applicable).
+        - Key UI constraints (bold, dark mode, neon accents).
+      `;
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: promptText
+      });
+      setGeneratedPrompt(response.text || "Failed to generate strategy.");
+    } catch (e: any) {
+      setGeneratedPrompt(`Error generating strategy: ${e.message}`);
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const isStrategist = effectiveRole === 'strategist';
   const isBuilder = effectiveRole === 'builder' || effectiveRole === 'archived_builder' as string;
@@ -88,6 +126,17 @@ export function IdeaCard({ idea, userProfile, effectiveRole }: IdeaCardProps) {
       }
 
       window.dispatchEvent(new CustomEvent('show-streak', { detail: { role: effectiveRole, points: addedPoints, streak: newStreak } }));
+
+      let fColor = 'bg-zinc-500';
+      if (newStatus === 'rejected') fColor = 'bg-red-500';
+      else if (newStatus === 'under_review') fColor = 'bg-[var(--color-neon-purple)]';
+      else if (newStatus === 'approved') fColor = 'bg-[var(--color-neon-blue)]';
+      else if (newStatus === 'building') fColor = 'bg-orange-500';
+      else if (newStatus === 'postponed') fColor = 'bg-orange-500';
+      else if (newStatus === 'done') fColor = 'bg-emerald-500';
+      else if (newStatus === 'final_rejected') fColor = 'bg-red-600';
+      
+      window.dispatchEvent(new CustomEvent('flash-bg', { detail: { color: fColor } }));
 
       setActionState('none');
       setShowModal(false);
@@ -188,10 +237,40 @@ export function IdeaCard({ idea, userProfile, effectiveRole }: IdeaCardProps) {
         );
       }
       if (idea.status === 'building') {
+        if (actionState === 'ai_plan') {
+          return (
+            <div className="mt-8 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+               <div className="text-sm text-[var(--color-neon-purple)] font-mono mb-2 flex items-center gap-2">
+                 <Sparkles className="w-4 h-4" /> AI AutoForge Strategy
+               </div>
+               <div className="text-xs text-zinc-400 mb-2 leading-relaxed">
+                 Below is the generated strategy. Copy this prompt and paste it to the AutoForge AO for automated execution.
+               </div>
+               {aiLoading ? (
+                 <div className="w-full bg-black/50 border border-[var(--color-neon-purple)]/30 rounded-xl px-4 py-8 flex flex-col items-center justify-center gap-4 animate-pulse">
+                   <Sparkles className="w-6 h-6 text-[var(--color-neon-purple)] animate-spin" />
+                   <div className="text-xs text-[var(--color-neon-purple)] font-mono tracking-widest uppercase">Analyzing architecture...</div>
+                 </div>
+               ) : (
+                 <textarea readOnly value={generatedPrompt} className="w-full bg-black/50 border border-[var(--color-neon-purple)]/30 rounded-xl px-4 py-4 text-xs font-mono text-zinc-300 transition h-48 resize-none focus:outline-none" />
+               )}
+               <div className="flex gap-3">
+                 <button onClick={() => setActionState('none')} className="w-1/3 py-3 border border-white/10 hover:bg-white/5 rounded-xl text-xs text-zinc-400 font-bold uppercase tracking-widest transition">Back</button>
+                 <button disabled={aiLoading || !generatedPrompt} onClick={() => { navigator.clipboard.writeText(generatedPrompt); }} className="flex-1 py-3 bg-[var(--color-neon-purple)]/20 text-[var(--color-neon-purple)] border border-[var(--color-neon-purple)]/50 rounded-xl text-sm font-bold tracking-widest uppercase transition-all hover:bg-[var(--color-neon-purple)]/30 disabled:opacity-50">Copy Prompt</button>
+               </div>
+            </div>
+          );
+        }
+
         return (
-          <button onClick={() => handleAction('done')} className="mt-8 w-full py-4 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-sm font-bold tracking-widest uppercase rounded-xl transition-all shadow-[0_0_30px_rgba(16,185,129,0.15)] flex justify-center items-center gap-3">
-            <CheckCircle2 className="w-5 h-5" /> MARK AS DONE
-          </button>
+          <div className="flex flex-col gap-4 mt-8">
+            <button onClick={() => handleAction('done')} className="w-full py-4 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-sm font-bold tracking-widest uppercase rounded-xl transition-all shadow-[0_0_30px_rgba(16,185,129,0.15)] flex justify-center items-center gap-3">
+              <CheckCircle2 className="w-5 h-5" /> MARK AS DONE
+            </button>
+            <button onClick={() => { setActionState('ai_plan'); handleGenerateAIPlan(); }} className="w-full py-3 bg-[var(--color-neon-purple)]/5 border border-[var(--color-neon-purple)]/20 hover:bg-[var(--color-neon-purple)]/10 text-[var(--color-neon-purple)] text-xs font-bold tracking-widest uppercase rounded-xl transition-all shadow-[0_0_20px_rgba(180,0,255,0.1)] flex justify-center items-center gap-2">
+              <Sparkles className="w-4 h-4" /> DEV MODE: GENERATE AUTOFORGE PLAN
+            </button>
+          </div>
         );
       }
       if (idea.status === 'postponed') {
@@ -208,10 +287,13 @@ export function IdeaCard({ idea, userProfile, effectiveRole }: IdeaCardProps) {
 
   return (
     <>
-      <div 
+      <motion.div 
+        layout
         onClick={() => setShowModal(true)}
+        whileHover={{ scale: 1.02, y: -2 }}
+        whileTap={{ scale: 0.98 }}
         className={cn(
-          "bg-black/20 border border-white/5 rounded-xl p-4 transition-all relative overflow-hidden cursor-pointer hover:bg-white/5 group",
+          "bg-black/20 border border-white/5 rounded-xl p-4 transition-all relative overflow-hidden cursor-pointer group",
           idea.status === 'building' && "border-[var(--color-neon-blue)]/50 shadow-[0_0_15px_rgba(0,240,255,0.15)] bg-[var(--color-neon-blue)]/5"
         )}
       >
@@ -222,13 +304,27 @@ export function IdeaCard({ idea, userProfile, effectiveRole }: IdeaCardProps) {
         <div className="flex justify-between items-start gap-4">
           <h4 className="font-semibold text-sm leading-tight text-zinc-100 group-hover:text-white transition-colors">{idea.title}</h4>
         </div>
-      </div>
+      </motion.div>
 
       {showModal && createPortal(
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-300">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" onClick={() => setShowModal(false)} />
+        <AnimatePresence>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/80 backdrop-blur-xl" 
+            onClick={() => setShowModal(false)} 
+          />
           
-          <div className="relative w-full max-w-2xl bg-zinc-950/80 border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300">
+          <motion.div 
+            layoutId={idea.id}
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="relative w-full max-w-2xl bg-[#08080c] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+          >
             {/* Glossy top highlight */}
             <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
             
@@ -253,52 +349,42 @@ export function IdeaCard({ idea, userProfile, effectiveRole }: IdeaCardProps) {
                 </p>
               </div>
 
-              <div className="mt-8 space-y-4">
-                {idea.rejectionReason && (
-                  <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex gap-3 text-red-200 text-sm">
-                    <AlertCircle className="w-5 h-5 shrink-0 text-red-500" />
-                    <div>
-                      <span className="font-bold uppercase tracking-widest text-[10px] block mb-1 text-red-400">Strategist Rejection</span> 
-                      {idea.rejectionReason}
+              <div className="mt-8">
+                <div className="text-[10px] text-zinc-500 tracking-widest font-bold uppercase mb-4 border-b border-white/5 pb-2">History & Progress</div>
+                <div className="space-y-4">
+                  {idea.timeline.map((event, idx) => (
+                    <div key={idx} className="flex items-start gap-4 p-4 rounded-xl border border-white/5 bg-white/5 backdrop-blur-sm transition-all hover:bg-white/10">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[var(--color-neon-blue)]/10 text-[var(--color-neon-blue)] shrink-0 mt-1">
+                        {event.stage === 'under_review' && <Sparkles className="w-4 h-4" />}
+                        {event.stage === 'rejected' && <X className="w-4 h-4 text-red-500" />}
+                        {event.stage === 'approved' && <Play className="w-4 h-4 text-[var(--color-neon-blue)]" />}
+                        {event.stage === 'building' && <AlertCircle className="w-4 h-4 text-orange-400" />}
+                        {event.stage === 'appealed' && <ArrowRightCircle className="w-4 h-4 text-[var(--color-neon-purple)]" />}
+                        {event.stage === 'postponed' && <AlertCircle className="w-4 h-4 text-orange-600" />}
+                        {event.stage === 'done' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+                        {event.stage === 'final_rejected' && <X className="w-4 h-4 text-red-600" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-bold text-xs uppercase tracking-widest text-[var(--color-neon-blue)]">{event.stage.replace('_', ' ')}</span>
+                          <time className="font-mono text-[10px] text-zinc-500">{new Date(event.time).toLocaleDateString()} {new Date(event.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</time>
+                        </div>
+                        {event.note && (
+                          <div className="text-sm text-zinc-300 font-mono p-3 bg-black/40 rounded-lg border border-white/5 break-words">
+                            {event.note}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
-
-                {idea.appealReason && (
-                  <div className="bg-[var(--color-neon-purple)]/10 border border-[var(--color-neon-purple)]/20 rounded-xl p-4 flex gap-3 text-[var(--color-neon-purple)] text-sm shadow-[0_0_15px_rgba(180,0,255,0.05)]">
-                    <ArrowRightCircle className="w-5 h-5 shrink-0" />
-                    <div>
-                      <span className="font-bold uppercase tracking-widest text-[10px] block mb-1">Creator Appeal</span> 
-                      {idea.appealReason}
-                    </div>
-                  </div>
-                )}
-
-                {idea.strategy && (
-                  <div className="bg-[var(--color-neon-blue)]/5 border border-[var(--color-neon-blue)]/20 rounded-xl p-4 flex gap-3 text-blue-100 text-sm shadow-[0_0_15px_rgba(0,240,255,0.05)]">
-                    <Play className="w-5 h-5 shrink-0 text-[var(--color-neon-blue)]" />
-                    <div>
-                      <span className="font-bold uppercase tracking-widest text-[10px] block mb-1 text-[var(--color-neon-blue)]">Approved Strategy</span> 
-                      <div className="font-mono text-zinc-300 mt-1">{idea.strategy}</div>
-                    </div>
-                  </div>
-                )}
-
-                {idea.postponeReason && (
-                  <div className="bg-orange-500/5 border border-orange-500/20 rounded-xl p-4 flex gap-3 text-orange-200 text-sm shadow-[0_0_15px_rgba(249,115,22,0.05)]">
-                    <AlertCircle className="w-5 h-5 shrink-0 text-orange-500" />
-                    <div>
-                      <span className="font-bold uppercase tracking-widest text-[10px] block mb-1 text-orange-400">Builder Postponed</span> 
-                      {idea.postponeReason}
-                    </div>
-                  </div>
-                )}
+                  ))}
+                </div>
               </div>
 
               {renderModalActions()}
             </div>
-          </div>
-        </div>,
+          </motion.div>
+        </div>
+        </AnimatePresence>,
         document.body
       )}
     </>

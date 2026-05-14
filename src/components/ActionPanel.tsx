@@ -71,7 +71,10 @@ export function ActionPanel({ userProfile }: ActionPanelProps) {
       setTitle('');
       setDesc('');
       
-        // Rocket animation
+      // Flash bg right away for submitted idea
+      window.dispatchEvent(new CustomEvent('flash-bg', { detail: { color: 'bg-[var(--color-neon-purple)]' } }));
+
+      // Rocket animation
       setShowRocket(true);
       setTimeout(() => {
         setShowRocket(false);

@@ -6,6 +6,8 @@ import { RoleClaim } from './components/RoleClaim';
 import { OnboardingGuide } from './components/OnboardingGuide';
 import { SettingsModal } from './components/SettingsModal';
 import { StreakAnimation } from './components/StreakAnimation';
+import { AnimatedBackground } from './components/AnimatedBackground';
+import { motion, AnimatePresence } from 'motion/react';
 import { Role } from '@/src/types';
 
 export type TabType = 'pipeline' | 'leaderboard' | 'analytics';
@@ -48,11 +50,9 @@ function AppContent() {
   const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
-    // Theme init
-    const savedTheme = localStorage.getItem('pipeline_theme');
-    if (savedTheme === 'light') {
-      document.documentElement.classList.add('light-theme');
-    }
+    // Theme init - force dark
+    document.documentElement.classList.remove('light-theme');
+    localStorage.removeItem('pipeline_theme');
 
     if (userProfile && userProfile.role !== 'unassigned') {
       const hasSeen = localStorage.getItem('pipeline_has_seen_guide');
@@ -113,17 +113,26 @@ function AppContent() {
         {userProfile.role !== 'unassigned' && (
           <div className="flex bg-black/40 p-1 rounded-xl w-full md:w-auto justify-center">
             {(['pipeline', 'leaderboard', 'analytics'] as TabType[]).map(tab => (
-              <button
+              <motion.button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-all ${
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className={`relative px-4 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-colors ${
                   activeTab === tab 
                     ? 'bg-white/10 text-white shadow-[0_0_15px_rgba(255,255,255,0.05)]' 
                     : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
                 }`}
               >
-                {tab === 'pipeline' ? 'work' : tab}
-              </button>
+                {activeTab === tab && (
+                  <motion.div
+                    layoutId="activeTabBadge"
+                    className="absolute inset-0 bg-white/10 rounded-lg pointer-events-none"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+                <span className="relative z-10">{tab === 'pipeline' ? 'work' : tab}</span>
+              </motion.button>
             ))}
           </div>
         )}
@@ -190,6 +199,7 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
+      <AnimatedBackground />
       <AppContent />
       <StreakAnimation />
     </AuthProvider>
