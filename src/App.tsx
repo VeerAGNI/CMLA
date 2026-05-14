@@ -80,7 +80,7 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-zinc-950">
+    <div className="min-h-screen flex flex-col bg-transparent">
       {showWelcome && <WelcomeBanner name={userProfile.displayName} />}
       {showGuide && <OnboardingGuide onClose={handleCloseGuide} />}
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} onShowGuide={() => setShowGuide(true)} />}

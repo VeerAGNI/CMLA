@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { AppIdea, User, IdeaStatus, Role } from '@/src/types';
 import { db, handleFirestoreError, OperationType } from '@/src/lib/firebase';
 import { doc, updateDoc, serverTimestamp, increment } from 'firebase/firestore';
-import { ChevronDown, ChevronUp, AlertCircle, ArrowRightCircle, Play, CheckCircle2, X, Sparkles } from 'lucide-react';
+import { ChevronDown, ChevronUp, AlertCircle, ArrowRightCircle, Play, CheckCircle2, X, Sparkles, Send, RefreshCw } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { createPortal } from 'react-dom';
 import { GoogleGenAI } from '@google/genai';
 import { motion, AnimatePresence } from 'motion/react';
+import { signInToAutoForge, fetchProjects, pushToAutoForgeTask } from '../services/autoforgeService';
 
 export interface IdeaCardProps {
   idea: AppIdea;
@@ -24,6 +25,11 @@ export function IdeaCard({ idea, userProfile, effectiveRole }: IdeaCardProps) {
   const [loading, setLoading] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState<string>('');
+
+  // AutoForge Integration States
+  const [afStatus, setAfStatus] = useState<'idle' | 'linking' | 'selecting' | 'pushing' | 'done'>('idle');
+  const [afProjects, setAfProjects] = useState<any[]>([]);
+  const [afSelectedProjectId, setAfSelectedProjectId] = useState<string>('');
 
   const handleGenerateAIPlan = async () => {
     setAiLoading(true);
@@ -56,6 +62,39 @@ export function IdeaCard({ idea, userProfile, effectiveRole }: IdeaCardProps) {
       setGeneratedPrompt(`Error generating strategy: ${e.message}`);
     } finally {
       setAiLoading(false);
+    }
+  };
+
+  const handlePushToAutoForge = async () => {
+    setAfStatus('linking');
+    try {
+      let projects;
+      try {
+        projects = await fetchProjects();
+      } catch (e) {
+        await signInToAutoForge();
+        projects = await fetchProjects();
+      }
+      setAfProjects(projects);
+      if (projects.length > 0) {
+        setAfSelectedProjectId(projects[0].id);
+      }
+      setAfStatus('selecting');
+    } catch (error: any) {
+      alert("Failed to link to AutoForge: " + error.message);
+      setAfStatus('idle');
+    }
+  };
+
+  const confirmPushToAutoForge = async () => {
+    if (!afSelectedProjectId) return;
+    setAfStatus('pushing');
+    try {
+      await pushToAutoForgeTask(afSelectedProjectId, idea.title, generatedPrompt);
+      setAfStatus('done');
+    } catch (error: any) {
+      alert("Failed to push to AutoForge: " + error.message);
+      setAfStatus('selecting');
     }
   };
 
@@ -252,8 +291,48 @@ export function IdeaCard({ idea, userProfile, effectiveRole }: IdeaCardProps) {
                    <div className="text-xs text-[var(--color-neon-purple)] font-mono tracking-widest uppercase">Analyzing architecture...</div>
                  </div>
                ) : (
-                 <textarea readOnly value={generatedPrompt} className="w-full bg-black/50 border border-[var(--color-neon-purple)]/30 rounded-xl px-4 py-4 text-xs font-mono text-zinc-300 transition h-48 resize-none focus:outline-none" />
+                 <textarea readOnly value={generatedPrompt} className="w-full bg-black/50 border border-[var(--color-neon-purple)]/30 rounded-xl px-4 py-4 text-xs font-mono text-zinc-300 transition h-32 resize-none focus:outline-none" />
                )}
+
+               {/* AutoForge Integration Box */}
+               {!aiLoading && generatedPrompt && (
+                 <div className="border border-[var(--color-neon-purple)]/20 bg-[var(--color-neon-purple)]/5 p-4 rounded-xl mt-4">
+                   {afStatus === 'idle' && (
+                     <button onClick={handlePushToAutoForge} className="w-full flex items-center justify-center gap-2 py-3 bg-[var(--color-neon-blue)]/10 text-[var(--color-neon-blue)] border border-[var(--color-neon-blue)]/30 hover:bg-[var(--color-neon-blue)]/20 transition rounded-xl text-xs font-bold tracking-widest uppercase">
+                       <Send className="w-4 h-4" /> SUBMIT TO AUTOFORGE
+                     </button>
+                   )}
+                   {afStatus === 'linking' && (
+                     <div className="flex items-center justify-center gap-2 text-[var(--color-neon-blue)] text-xs font-mono animate-pulse py-2">
+                       <RefreshCw className="w-4 h-4 animate-spin" /> Authenticating & Fetching Projects...
+                     </div>
+                   )}
+                   {afStatus === 'selecting' && (
+                     <div className="flex flex-col gap-3">
+                       <div className="text-xs text-zinc-400 font-mono">Select Target AutoForge Project:</div>
+                       <select value={afSelectedProjectId} onChange={(e) => setAfSelectedProjectId(e.target.value)} className="w-full bg-black/50 border border-white/20 rounded-lg p-2 text-white text-sm focus:outline-none">
+                         {afProjects.map(p => (
+                           <option key={p.id} value={p.id}>{p.githubRepo} ({p.githubOwner})</option>
+                         ))}
+                       </select>
+                       <button onClick={confirmPushToAutoForge} className="w-full py-2 bg-[var(--color-neon-blue)]/20 text-[var(--color-neon-blue)] border border-[var(--color-neon-blue)]/50 hover:bg-[var(--color-neon-blue)]/30 transition rounded-lg text-xs font-bold tracking-widest uppercase">
+                         Confirm Push
+                       </button>
+                     </div>
+                   )}
+                   {afStatus === 'pushing' && (
+                     <div className="flex items-center justify-center gap-2 text-[var(--color-neon-blue)] text-xs font-mono animate-pulse py-2">
+                       <Send className="w-4 h-4 animate-bounce" /> Pushing to AutoForge Queue...
+                     </div>
+                   )}
+                   {afStatus === 'done' && (
+                     <div className="flex items-center justify-center gap-2 text-emerald-400 text-xs font-mono py-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+                       <CheckCircle2 className="w-4 h-4" /> SUCCESS! READY IN AUTOFORGE
+                     </div>
+                   )}
+                 </div>
+               )}
+
                <div className="flex gap-3">
                  <button onClick={() => setActionState('none')} className="w-1/3 py-3 border border-white/10 hover:bg-white/5 rounded-xl text-xs text-zinc-400 font-bold uppercase tracking-widest transition">Back</button>
                  <button disabled={aiLoading || !generatedPrompt} onClick={() => { navigator.clipboard.writeText(generatedPrompt); }} className="flex-1 py-3 bg-[var(--color-neon-purple)]/20 text-[var(--color-neon-purple)] border border-[var(--color-neon-purple)]/50 rounded-xl text-sm font-bold tracking-widest uppercase transition-all hover:bg-[var(--color-neon-purple)]/30 disabled:opacity-50">Copy Prompt</button>

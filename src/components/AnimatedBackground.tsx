@@ -23,7 +23,7 @@ export function AnimatedBackground() {
           scale: [1, 1.3, 1]
         }}
         transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-[-10%] left-[-10%] w-[60vw] h-[60vw] rounded-full bg-[var(--color-neon-blue)]/20 blur-[100px]"
+        className="absolute top-[-10%] left-[-10%] w-[60vw] h-[60vw] rounded-full bg-[var(--color-neon-blue)]/30 blur-[100px]"
       />
       <motion.div
         animate={{
@@ -32,7 +32,7 @@ export function AnimatedBackground() {
           scale: [1, 1.2, 1]
         }}
         transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-[var(--color-neon-purple)]/20 blur-[100px]"
+        className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-[var(--color-neon-purple)]/30 blur-[100px]"
       />
       <motion.div
         animate={{
@@ -41,7 +41,7 @@ export function AnimatedBackground() {
           scale: [1, 1.1, 1]
         }}
         transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-[20%] left-[20%] w-[50vw] h-[50vw] rounded-full bg-emerald-500/10 blur-[100px]"
+        className="absolute top-[20%] left-[20%] w-[50vw] h-[50vw] rounded-full bg-emerald-500/15 blur-[100px]"
       />
 
       <AnimatePresence>
@@ -53,13 +53,13 @@ export function AnimatedBackground() {
             transition={{ duration: 1.5, ease: "easeOut" }}
             className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none"
             >
-              <div className={`w-[100vw] h-[100vw] rounded-full ${flashColor}/25 blur-[150px]`} />
+              <div className={`w-[100vw] h-[100vw] rounded-full ${flashColor}/30 blur-[150px]`} />
             </motion.div>
         )}
       </AnimatePresence>
 
       {/* Dimmer / Grain Overlay */}
-      <div className="absolute inset-0 bg-transparent" />
+      <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px]" />
     </div>
   );
 }
