@@ -30,6 +30,7 @@ export function IdeaCard({ idea, userProfile, effectiveRole }: IdeaCardProps) {
   const [afStatus, setAfStatus] = useState<'idle' | 'linking' | 'selecting' | 'pushing' | 'done'>('idle');
   const [afProjects, setAfProjects] = useState<any[]>([]);
   const [afSelectedProjectId, setAfSelectedProjectId] = useState<string>('');
+  const [afError, setAfError] = useState<string>('');
 
   const handleGenerateAIPlan = async () => {
     setAiLoading(true);
@@ -67,6 +68,7 @@ export function IdeaCard({ idea, userProfile, effectiveRole }: IdeaCardProps) {
 
   const handlePushToAutoForge = async () => {
     setAfStatus('linking');
+    setAfError('');
     try {
       let projects;
       try {
@@ -81,19 +83,25 @@ export function IdeaCard({ idea, userProfile, effectiveRole }: IdeaCardProps) {
       }
       setAfStatus('selecting');
     } catch (error: any) {
-      alert("Failed to link to AutoForge: " + error.message);
+      console.error("Failed to link to AutoForge:", error);
+      setAfError("Failed to link: " + (error.message || String(error)));
       setAfStatus('idle');
     }
   };
 
   const confirmPushToAutoForge = async () => {
-    if (!afSelectedProjectId) return;
+    if (!afSelectedProjectId) {
+      setAfError("Please select a project first.");
+      return;
+    }
     setAfStatus('pushing');
+    setAfError('');
     try {
       await pushToAutoForgeTask(afSelectedProjectId, idea.title, generatedPrompt);
       setAfStatus('done');
     } catch (error: any) {
-      alert("Failed to push to AutoForge: " + error.message);
+      console.error("Failed to push to AutoForge:", error);
+      setAfError("Push Error: " + (error.message || String(error)));
       setAfStatus('selecting');
     }
   };
@@ -328,6 +336,11 @@ export function IdeaCard({ idea, userProfile, effectiveRole }: IdeaCardProps) {
                    {afStatus === 'done' && (
                      <div className="flex items-center justify-center gap-2 text-emerald-400 text-xs font-mono py-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
                        <CheckCircle2 className="w-4 h-4" /> SUCCESS! READY IN AUTOFORGE
+                     </div>
+                   )}
+                   {afError && (
+                     <div className="mt-3 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs font-mono whitespace-pre-wrap break-words">
+                       <AlertCircle className="w-4 h-4 mb-1 inline mr-1" /> {afError}
                      </div>
                    )}
                  </div>
