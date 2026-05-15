@@ -1,3 +1,4 @@
+import { motion, AnimatePresence } from 'motion/react';
 import React, { useState } from 'react';
 import { User } from '@/src/types';
 import { db, handleFirestoreError, OperationType } from '@/src/lib/firebase';
@@ -12,7 +13,6 @@ export function ActionPanel({ userProfile }: ActionPanelProps) {
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showRocket, setShowRocket] = useState(false);
 
   const handleDropIdea = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,20 +71,15 @@ export function ActionPanel({ userProfile }: ActionPanelProps) {
       setTitle('');
       setDesc('');
       
-      // Flash bg right away for submitted idea
-      window.dispatchEvent(new CustomEvent('flash-bg', { detail: { color: 'bg-[var(--color-neon-purple)]' } }));
-
-      // Rocket animation
-      setShowRocket(true);
-      setTimeout(() => {
-        setShowRocket(false);
-        // Dispatch streak animation after rocket finishes
-        window.dispatchEvent(
-          new CustomEvent('show-streak', { 
-            detail: { role: 'creator', points: 0, streak: newStreak }
-          })
-        );
-      }, 2500);
+      window.dispatchEvent(
+        new CustomEvent('work-completed', { 
+          detail: { 
+            showStreak: userProfile.lastDropDate !== dropDateStr || newStreak !== userProfile.streak, 
+            points: 0, 
+            streak: newStreak 
+          }
+        })
+      );
       
     } catch (err) {
       handleFirestoreError(err, OperationType.CREATE, 'ideas');
@@ -96,16 +91,6 @@ export function ActionPanel({ userProfile }: ActionPanelProps) {
   return (
     <div className="glass rounded-3xl p-8 relative overflow-hidden ring-1 ring-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)]">
       <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--color-neon-blue)]/5 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-      
-      {showRocket && (
-        <div className="fixed inset-0 z-[100] pointer-events-none flex items-center justify-center overflow-hidden">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" />
-          <div className="animate-[rocket-launch_2.5s_ease-in-out_forwards] relative flex flex-col items-center">
-            <Rocket className="w-48 h-48 text-[var(--color-neon-blue)] drop-shadow-[0_0_40px_rgba(0,240,255,0.8)] fill-current relative z-10" />
-            <div className="w-16 h-[500px] bg-gradient-to-b from-[var(--color-neon-blue)] via-[var(--color-neon-purple)] to-transparent blur-xl opacity-80 -mt-8" />
-          </div>
-        </div>
-      )}
 
       <div className="flex items-center justify-between mb-8 relative">
         <div>
@@ -126,7 +111,7 @@ export function ActionPanel({ userProfile }: ActionPanelProps) {
             placeholder="Your idea.."
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-4 text-lg text-white focus:outline-none focus:border-[var(--color-neon-blue)]/50 focus:bg-white/5 transition font-semibold"
+            className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-4 text-lg text-white focus:outline-none focus:border-yellow-500/50 focus:bg-white/5 transition font-semibold"
             required
             maxLength={100}
           />
@@ -134,7 +119,7 @@ export function ActionPanel({ userProfile }: ActionPanelProps) {
             placeholder="Your description.."
             value={desc}
             onChange={(e) => setDesc(e.target.value)}
-            className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-4 text-base text-zinc-300 focus:outline-none focus:border-[var(--color-neon-blue)]/50 focus:bg-white/5 transition h-40 resize-none leading-relaxed"
+            className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-4 text-base text-zinc-300 focus:outline-none focus:border-yellow-500/50 focus:bg-white/5 transition h-40 resize-none leading-relaxed"
             required
             maxLength={2000}
           />
@@ -143,7 +128,7 @@ export function ActionPanel({ userProfile }: ActionPanelProps) {
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-4 text-sm font-bold tracking-widest bg-[var(--color-neon-blue)] text-black hover:bg-white hover:text-black hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] rounded-xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
+          className="w-full py-4 text-sm font-bold tracking-widest bg-[var(--color-neon-blue)] text-black hover:bg-yellow-400 hover:text-black hover:shadow-[0_0_30px_rgba(250,204,21,0.6)] rounded-xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
         >
           {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'SUBMIT'}
         </button>

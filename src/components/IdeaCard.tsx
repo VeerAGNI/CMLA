@@ -14,14 +14,15 @@ export interface IdeaCardProps {
   userProfile: User;
   effectiveRole: Role;
   key?: React.Key;
+  customTrigger?: React.ReactNode;
 }
 
-export function IdeaCard({ idea, userProfile, effectiveRole }: IdeaCardProps) {
+export function IdeaCard({ idea, userProfile, effectiveRole, customTrigger }: IdeaCardProps) {
   const [showModal, setShowModal] = useState(false);
   const [strategyInput, setStrategyInput] = useState('');
   const [rejectInput, setRejectInput] = useState('');
   const [postponeInput, setPostponeInput] = useState('');
-  const [actionState, setActionState] = useState<'none' | 'reject' | 'strategize' | 'postpone' | 'ai_plan'>('none');
+  const [actionState, setActionState] = useState<'none' | 'reject' | 'strategize' | 'postpone' | 'ai_plan' | 'builder_reject'>('none');
   const [loading, setLoading] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState<string>('');
@@ -120,8 +121,8 @@ export function IdeaCard({ idea, userProfile, effectiveRole }: IdeaCardProps) {
         time: new Date().toISOString(),
         by: userProfile.id
       };
-      if (updates.strategy || updates.rejectionReason || updates.postponeReason) {
-        newEvent.note = updates.strategy || updates.rejectionReason || updates.postponeReason;
+      if (updates.strategy || updates.rejectionReason || updates.builderRejectionReason || updates.postponeReason) {
+        newEvent.note = updates.strategy || updates.rejectionReason || updates.builderRejectionReason || updates.postponeReason;
       }
 
       await updateDoc(ideaRef, {
@@ -172,10 +173,18 @@ export function IdeaCard({ idea, userProfile, effectiveRole }: IdeaCardProps) {
          }
       }
 
-      window.dispatchEvent(new CustomEvent('show-streak', { detail: { role: effectiveRole, points: addedPoints, streak: newStreak } }));
+      window.dispatchEvent(
+        new CustomEvent('work-completed', { 
+          detail: { 
+            showStreak: addedPoints > 0, 
+            points: addedPoints, 
+            streak: newStreak 
+          }
+        })
+      );
 
       let fColor = 'bg-zinc-500';
-      if (newStatus === 'rejected') fColor = 'bg-red-500';
+      if (newStatus === 'rejected' || newStatus === 'builder_rejected') fColor = 'bg-red-500';
       else if (newStatus === 'under_review') fColor = 'bg-[var(--color-neon-purple)]';
       else if (newStatus === 'approved') fColor = 'bg-[var(--color-neon-blue)]';
       else if (newStatus === 'building') fColor = 'bg-orange-500';
@@ -199,7 +208,7 @@ export function IdeaCard({ idea, userProfile, effectiveRole }: IdeaCardProps) {
 
     // Strategist Actions
     if (isStrategist || isBuilder) {
-      if (idea.status === 'under_review') {
+      if (idea.status === 'under_review' || idea.status === 'builder_rejected') {
         if (actionState === 'none') {
           return (
             <div className="flex gap-4 mt-8">
@@ -256,6 +265,18 @@ export function IdeaCard({ idea, userProfile, effectiveRole }: IdeaCardProps) {
         );
       }
       if (idea.status === 'approved') {
+        if (actionState === 'builder_reject') {
+          return (
+            <div className="mt-8 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="text-sm text-zinc-400 font-mono mb-2">Provide reason for returning to Strategist:</div>
+              <textarea autoFocus value={rejectInput} onChange={e => setRejectInput(e.target.value)} placeholder="Missing details? Cannot be built?" className="w-full bg-black/50 border border-red-500/30 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-red-500/50 transition h-24 resize-none" />
+              <div className="flex gap-3">
+                <button onClick={() => setActionState('none')} className="w-1/3 py-3 border border-white/10 hover:bg-white/5 rounded-xl text-xs text-zinc-400 font-bold uppercase tracking-widest transition">Back</button>
+                <button disabled={!rejectInput} onClick={() => handleAction('builder_rejected', { builderRejectionReason: rejectInput })} className="flex-1 py-3 bg-red-500/20 text-red-400 border border-red-500/50 rounded-xl text-sm font-bold tracking-widest uppercase transition-all hover:bg-red-500/30 disabled:opacity-50">Return to Strategist</button>
+              </div>
+            </div>
+          );
+        }
         if (actionState === 'postpone') {
           return (
             <div className="mt-8 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -275,15 +296,30 @@ export function IdeaCard({ idea, userProfile, effectiveRole }: IdeaCardProps) {
         }
 
         return (
-          <div className="flex gap-4 mt-8">
-            <button onClick={() => setActionState('postpone')} className="w-1/3 py-4 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 text-orange-400 rounded-xl text-xs font-bold transition shadow-[0_0_20px_rgba(249,115,22,0.1)]">POSTPONE</button>
-            <button onClick={() => handleAction('building')} className="flex-1 py-4 bg-[var(--color-neon-blue)]/10 hover:bg-[var(--color-neon-blue)]/20 border border-[var(--color-neon-blue)]/30 text-[var(--color-neon-blue)] text-sm font-bold tracking-widest uppercase rounded-xl transition-all shadow-[0_0_30px_rgba(0,240,255,0.15)] hover:shadow-[0_0_40px_rgba(0,240,255,0.25)] flex justify-center items-center gap-3">
+          <div className="flex flex-col gap-4 mt-8">
+            <div className="flex gap-4">
+              <button onClick={() => setActionState('builder_reject')} className="flex-1 py-4 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-xl text-xs font-bold transition shadow-[0_0_20px_rgba(239,68,68,0.1)] hover:shadow-[0_0_30px_rgba(239,68,68,0.2)]">Reject / Return</button>
+              <button onClick={() => setActionState('postpone')} className="flex-1 py-4 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 text-orange-400 rounded-xl text-xs font-bold transition shadow-[0_0_20px_rgba(249,115,22,0.1)] hover:shadow-[0_0_30px_rgba(249,115,22,0.2)]">POSTPONE</button>
+            </div>
+            <button onClick={() => handleAction('building')} className="w-full py-4 bg-[var(--color-neon-blue)]/10 hover:bg-[var(--color-neon-blue)]/20 border border-[var(--color-neon-blue)]/30 text-[var(--color-neon-blue)] text-sm font-bold tracking-widest uppercase rounded-xl transition-all shadow-[0_0_30px_rgba(0,240,255,0.15)] hover:shadow-[0_0_40px_rgba(0,240,255,0.25)] flex justify-center items-center gap-3">
               <Play className="w-5 h-5 fill-current" /> BEGIN BUILD
             </button>
           </div>
         );
       }
       if (idea.status === 'building') {
+        if (actionState === 'builder_reject') {
+          return (
+            <div className="mt-8 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="text-sm text-zinc-400 font-mono mb-2">Provide reason for returning to Strategist:</div>
+              <textarea autoFocus value={rejectInput} onChange={e => setRejectInput(e.target.value)} placeholder="Missing details? Cannot be built?" className="w-full bg-black/50 border border-red-500/30 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-red-500/50 transition h-24 resize-none" />
+              <div className="flex gap-3">
+                <button onClick={() => setActionState('none')} className="w-1/3 py-3 border border-white/10 hover:bg-white/5 rounded-xl text-xs text-zinc-400 font-bold uppercase tracking-widest transition">Back</button>
+                <button disabled={!rejectInput} onClick={() => handleAction('builder_rejected', { builderRejectionReason: rejectInput })} className="flex-1 py-3 bg-red-500/20 text-red-400 border border-red-500/50 rounded-xl text-sm font-bold tracking-widest uppercase transition-all hover:bg-red-500/30 disabled:opacity-50">Return to Strategist</button>
+              </div>
+            </div>
+          );
+        }
         if (actionState === 'ai_plan') {
           return (
             <div className="mt-8 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -359,9 +395,12 @@ export function IdeaCard({ idea, userProfile, effectiveRole }: IdeaCardProps) {
             <button onClick={() => handleAction('done')} className="w-full py-4 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-sm font-bold tracking-widest uppercase rounded-xl transition-all shadow-[0_0_30px_rgba(16,185,129,0.15)] flex justify-center items-center gap-3">
               <CheckCircle2 className="w-5 h-5" /> MARK AS DONE
             </button>
-            <button onClick={() => { setActionState('ai_plan'); handleGenerateAIPlan(); }} className="w-full py-3 bg-[var(--color-neon-purple)]/5 border border-[var(--color-neon-purple)]/20 hover:bg-[var(--color-neon-purple)]/10 text-[var(--color-neon-purple)] text-xs font-bold tracking-widest uppercase rounded-xl transition-all shadow-[0_0_20px_rgba(180,0,255,0.1)] flex justify-center items-center gap-2">
-              <Sparkles className="w-4 h-4" /> DEV MODE: GENERATE AUTOFORGE PLAN
-            </button>
+            <div className="flex gap-4">
+              <button onClick={() => setActionState('builder_reject')} className="flex-1 py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-xl text-xs font-bold transition shadow-[0_0_20px_rgba(239,68,68,0.1)] hover:shadow-[0_0_30px_rgba(239,68,68,0.2)]">Reject / Return</button>
+              <button onClick={() => { setActionState('ai_plan'); handleGenerateAIPlan(); }} className="flex-1 py-3 bg-[var(--color-neon-purple)]/5 border border-[var(--color-neon-purple)]/20 hover:bg-[var(--color-neon-purple)]/10 text-[var(--color-neon-purple)] text-xs font-bold tracking-widest uppercase rounded-xl transition-all shadow-[0_0_20px_rgba(180,0,255,0.1)] flex justify-center items-center gap-2">
+                <Sparkles className="w-4 h-4" /> GENERATE AUTOFORGE
+              </button>
+            </div>
           </div>
         );
       }
@@ -379,24 +418,39 @@ export function IdeaCard({ idea, userProfile, effectiveRole }: IdeaCardProps) {
 
   return (
     <>
-      <motion.div 
-        layout
-        onClick={() => setShowModal(true)}
-        whileHover={{ scale: 1.02, y: -2 }}
-        whileTap={{ scale: 0.98 }}
-        className={cn(
-          "bg-black/20 border border-white/5 rounded-xl p-4 transition-all relative overflow-hidden cursor-pointer group",
-          idea.status === 'building' && "border-[var(--color-neon-blue)]/50 shadow-[0_0_15px_rgba(0,240,255,0.15)] bg-[var(--color-neon-blue)]/5"
-        )}
-      >
-        {idea.status === 'building' && (
-          <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--color-neon-blue)]/10 blur-2xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none animate-pulse" />
-        )}
-        
-        <div className="flex justify-between items-start gap-4">
-          <h4 className="font-semibold text-sm leading-tight text-zinc-100 group-hover:text-white transition-colors">{idea.title}</h4>
+      {customTrigger ? (
+        <div onClick={() => setShowModal(true)} className="cursor-pointer w-full text-left">
+          {customTrigger}
         </div>
-      </motion.div>
+      ) : (
+        <motion.div 
+          layout
+          onClick={() => setShowModal(true)}
+          whileHover={{ scale: 1.02, y: -2 }}
+          whileTap={{ scale: 0.98 }}
+          className={cn(
+            "bg-black/20 border border-white/5 rounded-xl p-4 transition-all relative overflow-hidden cursor-pointer group",
+            idea.status === 'building' && "border-[var(--color-neon-blue)]/50 shadow-[0_0_15px_rgba(0,240,255,0.15)] bg-[var(--color-neon-blue)]/5",
+            idea.status === 'builder_rejected' && "border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.1)] bg-red-500/5"
+          )}
+        >
+          {idea.status === 'building' && (
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--color-neon-blue)]/10 blur-2xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none animate-pulse" />
+          )}
+          {idea.status === 'builder_rejected' && (
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(239,68,68,0.15),transparent_50%)] pointer-events-none" />
+          )}
+          
+          <div className="flex justify-between items-start gap-4 relative z-10">
+            <h4 className="font-semibold text-sm leading-tight text-zinc-100 group-hover:text-white transition-colors">{idea.title}</h4>
+            {idea.status === 'builder_rejected' && (
+              <span className="text-[9px] uppercase tracking-widest font-bold px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-red-400 shrink-0">
+                Returned
+              </span>
+            )}
+          </div>
+        </motion.div>
+      )}
 
       {showModal && createPortal(
         <AnimatePresence>
@@ -435,6 +489,21 @@ export function IdeaCard({ idea, userProfile, effectiveRole }: IdeaCardProps) {
             </div>
             
             <div className="p-6 sm:p-8 pt-4 overflow-y-auto">
+              {idea.status === 'builder_rejected' && idea.builderRejectionReason && (
+                <div className="mb-6 p-6 rounded-xl border border-red-500/50 bg-red-500/10 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(239,68,68,0.3),transparent_70%)] opacity-80 pointer-events-none" />
+                  <div className="absolute inset-0 backdrop-blur-[2px] pointer-events-none" />
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-2 text-red-400 font-bold text-xs tracking-widest uppercase mb-2">
+                      <X className="w-4 h-4" /> Returned by Builder
+                    </div>
+                    <div className="text-zinc-200 font-mono text-sm leading-relaxed whitespace-pre-wrap">
+                      {idea.builderRejectionReason}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="prose prose-invert max-w-none">
                 <p className="text-sm sm:text-base text-zinc-300 leading-relaxed font-mono bg-white/5 p-4 rounded-xl border border-white/5">
                   {idea.description}
@@ -455,6 +524,7 @@ export function IdeaCard({ idea, userProfile, effectiveRole }: IdeaCardProps) {
                         {event.stage === 'postponed' && <AlertCircle className="w-4 h-4 text-orange-600" />}
                         {event.stage === 'done' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
                         {event.stage === 'final_rejected' && <X className="w-4 h-4 text-red-600" />}
+                        {event.stage === 'builder_rejected' && <AlertCircle className="w-4 h-4 text-red-500" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-2">

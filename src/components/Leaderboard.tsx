@@ -13,10 +13,9 @@ export function Leaderboard() {
   const [editPoints, setEditPoints] = useState<number>(0);
 
   useEffect(() => {
-    // We'll show all users for admins/builders so they can be edited if needed
     const q = query(
       collection(db, 'users'),
-      where('role', 'in', ['creator', 'strategist', 'builder', 'archived_creator', 'archived_strategist', 'archived_builder'])
+      where('role', 'in', ['creator', 'strategist', 'builder'])
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
@@ -57,9 +56,8 @@ export function Leaderboard() {
               <div>
                 <div className="text-sm font-semibold flex items-center gap-2">
                   {u.displayName}
-                  {u.role.startsWith('archived') && <span className="text-[10px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded uppercase tracking-widest">Archived</span>}
                 </div>
-                <div className="text-[10px] text-zinc-400 font-mono capitalize">{u.role.replace('archived_', '').replace(/_/g, ' ')}</div>
+                <div className="text-[10px] text-zinc-400 font-mono capitalize">{u.role}</div>
               </div>
             </div>
             

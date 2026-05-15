@@ -21,7 +21,7 @@ export function Dashboard({ userProfile, effectiveRole, activeTab }: DashboardPr
   useEffect(() => {
     const q = query(
       collection(db, 'ideas'),
-      where('status', 'in', ['under_review', 'rejected', 'appealed', 'approved', 'building', 'done', 'final_rejected', 'postponed'])
+      where('status', 'in', ['under_review', 'rejected', 'appealed', 'approved', 'building', 'done', 'final_rejected', 'postponed', 'builder_rejected'])
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as AppIdea);
@@ -76,7 +76,7 @@ export function Dashboard({ userProfile, effectiveRole, activeTab }: DashboardPr
 
       {activeTab === 'analytics' && (
         <motion.div key="analytics" {...animationProps}>
-          <AnalyticsPanel ideas={ideas} userProfile={userProfile} />
+          <AnalyticsPanel ideas={ideas} userProfile={userProfile} effectiveRole={effectiveRole} />
         </motion.div>
       )}
     </AnimatePresence>
